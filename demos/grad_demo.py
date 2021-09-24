@@ -57,12 +57,12 @@ def grad_demo(screen):
         # temp.clamp_(1e-7, 1)
         learning_rate *= 0.9
         # next_fric_coeff = Variable(temp, requires_grad=True)
-        print(i, '/', max_iter, dist.data[0])
+        print(i, '/', max_iter, dist.data.item())
         print(grad)
         # print(next_fric_coeff)
         print(learned_force(0.05))
         print('=======')
-        if abs((last_dist - dist).data[0]) < 1e-5:
+        if abs((last_dist - dist).data.item()) < 1e-5:
             break
         last_dist = dist
         dist_hist.append(dist)
@@ -75,7 +75,7 @@ def grad_demo(screen):
     # rec = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=rec)
     dist = (target.pos - c.pos).norm()
-    print(dist.data[0])
+    print(dist.data.item())
 
     # import pickle
     # with open('control_balls_dist_hist.pkl', 'w') as f:
