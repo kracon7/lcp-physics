@@ -178,4 +178,15 @@ class TestDemos(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    
+    if len(sys.argv) > 1 and sys.argv[1] == '-nd':
+        # Run without displaying
+        screen = None
+    else:
+        pygame.init()
+        width, height = 1000, 600
+        screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF)
+        screen.set_alpha(None)
+        pygame.display.set_caption('2D Engine')
+
     unittest.main()

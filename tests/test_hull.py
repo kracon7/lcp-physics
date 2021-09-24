@@ -1,5 +1,6 @@
 import unittest
 
+import pygame
 import math
 
 from lcp_physics.physics.bodies import Circle, Rect, Hull
