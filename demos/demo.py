@@ -93,7 +93,8 @@ def chain_demo(screen):
 def slide_demo(screen):
     bodies = []
     joints = []
-    restitution = Defaults.RESTITUTION
+    # restitution = Defaults.RESTITUTION
+    restitution = 0
     fric_coeff = 0.15
 
     inclination = math.pi / 32
@@ -166,6 +167,6 @@ if __name__ == '__main__':
         pygame.display.set_caption('2D Engine')
 
     slide_demo(screen)
-    fric_demo(screen)
-    chain_demo(screen)
-    debug_demo(screen)
+    # fric_demo(screen)
+    # chain_demo(screen)
+    # debug_demo(screen)
