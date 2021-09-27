@@ -19,7 +19,7 @@ class Defaults:
     TOL = 1e-6
 
     # Default simulation parameters
-    RESTITUTION = 0.5
+    RESTITUTION = 0
 
     FRIC_COEFF = 0.9
     FRIC_DIRS = 2
