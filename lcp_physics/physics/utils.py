@@ -32,7 +32,8 @@ class Defaults:
 
     # Tensor defaults
     DTYPE = torch.double
-    DEVICE = torch.device('cpu')
+    # DEVICE = torch.device('cpu')
+    DEVICE = torch.device('cuda')
     LAYOUT = torch.strided
 
     # Post stabilization flag
