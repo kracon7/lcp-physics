@@ -8,6 +8,7 @@ experimental
 *.log
 *.bak
 *.mp4
+*.avi
 *.png
 *.bmp
 *.lprof

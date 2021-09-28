@@ -2,6 +2,8 @@ import math
 import sys
 
 import pygame
+import torch
+from torch.autograd import Variable
 
 from lcp_physics.physics.bodies import Circle, Rect, Hull
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
@@ -10,36 +12,55 @@ from lcp_physics.physics.utils import Defaults, Recorder
 from lcp_physics.physics.world import World, run_world
 
 
-TIME = 20
+TIME = 10
 DT = Defaults.DT
+
+def make_world(particles, hand):
+    '''
+    build world based on particle positions
+    '''
+    bodies = []
+    joints = []
+    fric_coeff = 0.15
+
+    N = len(particles)
+    for i in range(N-1):
+        p1, p2 = particles[i], particles[i+1]
+        c1 = Circle(p1, 20)
+        c2 = Circle(p2, 20)
+
+        if i == 0:
+            bodies.append(c1)
+        bodies.append(c2)
+
+        joints += [FixedJoint(bodies[-2], bodies[-1])]
+
+    c = Circle(hand, 60)
+    bodies.append(c)
+
+    initial_force = torch.DoubleTensor([0, 3, 0])
+    initial_force[2] = 0
+    initial_force = Variable(initial_force, requires_grad=True)
+
+    # Initial demo
+    learned_force = lambda t: initial_force if t < 0.2 else ExternalForce.ZEROS
+    c.add_force(ExternalForce(learned_force))
+
+    world = World(bodies, joints, dt=DT)
+    return world
+    
 
 
 def fixed_joint_demo(screen):
-    bodies = []
-    joints = []
-    restitution = 0
-    fric_coeff = 0.15
-
-    r = Rect([120, 100], [60, 60],
-             restitution=restitution, fric_coeff=fric_coeff)
-    bodies.append(r)
-    r.add_force(Gravity(g=100))
-    r2 = Rect([160, 100], [60, 60],
-              restitution=restitution, fric_coeff=fric_coeff)
-    bodies.append(r2)
-    joints += [FixedJoint(r, r2)]
-    r2.add_no_contact(r)
-    r2.add_force(Gravity(g=100))
-
-    inclination = math.pi / 32
-    r = Rect([inclination, 500, 500], [900, 10],
-             restitution=restitution, fric_coeff=fric_coeff)
-    bodies.append(r)
-    joints.append(TotalConstraint(r))
-
-    recorder = None
-    # recorder = Recorder(DT, screen)
-    world = World(bodies, joints, dt=DT)
+    particles = [[500, 300],
+                 [500, 340],
+                 [500, 380],
+                 [540, 300],
+                 [580, 300],
+                 [500, 420]]
+    world = make_world(particles, [200, 300])
+    # recorder = None
+    recorder = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=recorder)
 
 

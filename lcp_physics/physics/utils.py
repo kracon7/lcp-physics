@@ -32,8 +32,8 @@ class Defaults:
 
     # Tensor defaults
     DTYPE = torch.double
-    # DEVICE = torch.device('cpu')
-    DEVICE = torch.device('cuda')
+    DEVICE = torch.device('cpu')
+    # DEVICE = torch.device('cuda')
     LAYOUT = torch.strided
 
     # Post stabilization flag
@@ -68,7 +68,7 @@ class Recorder:
         if t - self.prev_t >= self.dt:
             pygame.image.save(self.screen,
                               os.path.join(self.path,
-                                           '{}.bmp'.format(self.frame)))
+                                           '%07d.bmp'%(self.frame)))
             self.frame += 1
             self.prev_t += self.dt
 

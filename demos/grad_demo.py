@@ -29,7 +29,8 @@ def grad_demo(screen):
     # next_fric_coeff = Variable(torch.DoubleTensor([1e-7]), requires_grad=True)
     # c.fric_coeff = next_fric_coeff
     # initial_state = world.save_state()
-    run_world(world, run_time=TIME, screen=screen)
+    rec = Recorder(DT, screen)
+    run_world(world, run_time=TIME, screen=screen, recorder=rec)
 
     learning_rate = 0.001
     max_iter = 100
@@ -89,7 +90,7 @@ def make_world(learned_force):
 
     target = Circle([500, 300], 30)
     bodies.append(target)
-
+ 
     c1 = Circle([250, 210], 30)
     bodies.append(c1)
     c1.add_force(ExternalForce(learned_force))
