@@ -33,7 +33,7 @@ def grad_demo(screen):
     # rec = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=rec)
 
-    learning_rate = 0.001
+    learning_rate = 0.003
     max_iter = 100
 
     dist_hist = []
@@ -90,7 +90,7 @@ def make_world(learned_force):
     bodies = []
     joints = []
 
-    target = Circle([500, 300], 30)
+    target = Circle([500, 350], 30)
     bodies.append(target)
  
     c1 = Circle([250, 210], 30)
@@ -98,7 +98,7 @@ def make_world(learned_force):
     c1.add_force(ExternalForce(learned_force))
     c1.add_no_contact(target)
 
-    c2 = Circle([400, 250], 30)
+    c2 = Circle([400, 250], 30, mass=0.01)
     bodies.append(c2)
     # joints.append(Joint(c2, None, [500, 275]))
     c2.add_no_contact(target)
