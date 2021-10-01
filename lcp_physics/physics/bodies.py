@@ -6,6 +6,7 @@ import pygame
 import torch
 
 from .utils import Indices, Defaults, get_tensor, cross_2d, rotation_matrix
+from .constraints import FixedJoint
 
 X = Indices.X
 Y = Indices.Y
@@ -299,3 +300,27 @@ class Rect(Hull):
         p = super().draw(screen, pixels_per_meter=pixels_per_meter,
                          draw_center=False)
         return [l1, l2] + p
+
+
+class Composite():
+    """rigid body based on particle formulation"""
+    def __init__(self, particle_pos, fric_coeff=0.15):
+        # super(ClassName, self).__init__()
+        # self.args = args
+
+        bodies = []
+        joints = []
+        N = particle_pos.shape[0]
+        for i in range(N-1):
+            p1, p2 = particle_pos[i], particle_pos[i+1]
+            c1 = Circle(p1, 20)
+            c2 = Circle(p2, 20)
+
+            if i == 0:
+                bodies.append(c1)
+            bodies.append(c2)
+
+            joints += [FixedJoint(bodies[0], bodies[-1])]
+
+        self.bodies = bodies
+        self.joints = joints

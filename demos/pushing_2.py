@@ -2,10 +2,11 @@ import math
 import sys
 
 import pygame
+import numpy as np
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect, Hull
+from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, Recorder
@@ -15,7 +16,7 @@ from lcp_physics.physics.world import World, run_world
 TIME = 10
 DT = Defaults.DT
 
-def make_world(particles, hand):
+def make_world(particle_pos, hand):
     '''
     build world based on particle positions
     '''
@@ -23,17 +24,9 @@ def make_world(particles, hand):
     joints = []
     fric_coeff = 0.15
 
-    N = len(particles)
-    for i in range(N-1):
-        p1, p2 = particles[i], particles[i+1]
-        c1 = Circle(p1, 20)
-        c2 = Circle(p2, 20)
-
-        if i == 0:
-            bodies.append(c1)
-        bodies.append(c2)
-
-        joints += [FixedJoint(bodies[-2], bodies[-1])]
+    composite_body = Composite(particle_pos)
+    bodies += composite_body.bodies
+    joints += composite_body.joints
 
     c = Circle(hand, 60)
     bodies.append(c)
@@ -51,15 +44,15 @@ def make_world(particles, hand):
     
 
 def fixed_joint_demo(screen):
-    particles = [[500, 300],
-                 [500, 340],
-                 [500, 380],
-                 [540, 300],
-                 [580, 300],
-                 [500, 420]]
-    world = make_world(particles, [200, 300])
-    # recorder = None
-    recorder = Recorder(DT, screen)
+    particle_pos = np.array([[500, 300],
+                             [500, 340],
+                             [500, 380],
+                             [540, 300],
+                             [580, 300],
+                             [500, 420]])
+    world = make_world(particle_pos, [200, 300])
+    recorder = None
+    # recorder = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=recorder)
 
 
