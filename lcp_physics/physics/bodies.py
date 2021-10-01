@@ -139,7 +139,7 @@ class Circle(Body):
         super().set_p(new_p, update_geom_rotation=update_geom_rotation)
 
     def draw(self, screen, pixels_per_meter=1):
-        center = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        center = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         rad = int(self.rad.item() * pixels_per_meter)
         # draw radius to visualize orientation
         r = pygame.draw.line(screen, (0, 0, 255), center,
@@ -304,7 +304,7 @@ class Rect(Hull):
 
 class Composite():
     """rigid body based on particle formulation"""
-    def __init__(self, particle_pos, fric_coeff=0.15):
+    def __init__(self, particle_pos, radius, fric_coeff=0.15):
         # super(ClassName, self).__init__()
         # self.args = args
 
@@ -313,8 +313,8 @@ class Composite():
         N = particle_pos.shape[0]
         for i in range(N-1):
             p1, p2 = particle_pos[i], particle_pos[i+1]
-            c1 = Circle(p1, 20)
-            c2 = Circle(p2, 20)
+            c1 = Circle(p1, radius)
+            c2 = Circle(p2, radius)
 
             if i == 0:
                 bodies.append(c1)

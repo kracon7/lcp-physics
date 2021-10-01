@@ -17,7 +17,7 @@ DT = Defaults.DT
 
 
 def grad_demo(screen):
-    initial_force = torch.DoubleTensor([0, 3, 0])
+    initial_force = torch.FloatTensor([0, 3, 0])
     initial_force[2] = 0
     initial_force = Variable(initial_force, requires_grad=True)
 
@@ -26,7 +26,7 @@ def grad_demo(screen):
     # learned_force = gravity
     world, c, target = make_world(learned_force)
     # initial_state = world.save_state()
-    # next_fric_coeff = Variable(torch.DoubleTensor([1e-7]), requires_grad=True)
+    # next_fric_coeff = Variable(torch.FloatTensor([1e-7]), requires_grad=True)
     # c.fric_coeff = next_fric_coeff
     # initial_state = world.save_state()
     rec = None
@@ -53,7 +53,7 @@ def grad_demo(screen):
         grad = initial_force.grad.data
         # grad.clamp_(-10, 10)
         initial_force = Variable(initial_force.data - learning_rate * grad, requires_grad=True)
-        print('\n initial force: ', initial_force.detach().numpy().tolist())
+        print('\n initial force: ', initial_force.detach().cpu().numpy().tolist())
         # grad = c.fric_coeff.grad.data
         # grad.clamp_(-10, 10)
         # temp = c.fric_coeff.data - learning_rate * grad

@@ -31,7 +31,8 @@ class Defaults:
     CONTACT = 'DiffContactHandler'
 
     # Tensor defaults
-    DTYPE = torch.double
+    # DTYPE = torch.double
+    DTYPE = torch.float
     DEVICE = torch.device('cpu')
     # DEVICE = torch.device('cuda')
     LAYOUT = torch.strided

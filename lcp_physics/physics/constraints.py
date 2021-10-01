@@ -49,7 +49,7 @@ class Joint:
             self.pos2 = self.pos - self.body2.pos
 
     def draw(self, screen, pixels_per_meter=1):
-        pos = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        pos = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.circle(screen, (0, 255, 0), pos, 2)]
 
 
@@ -87,8 +87,8 @@ class FixedJoint:
             self.pos2 = self.pos - self.body2.pos
 
     def draw(self, screen, pixels_per_meter=1):
-        start = (self.body1.pos.detach().numpy() * pixels_per_meter).astype(int)
-        end = (self.body2.pos.detach().numpy() * pixels_per_meter).astype(int)
+        start = (self.body1.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
+        end = (self.body2.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.line(screen, (0, 255, 0), start, end, 2)]
 
 
@@ -115,7 +115,7 @@ class YConstraint:
         self.rot1 = self.body1.p[0]
 
     def draw(self, screen, pixels_per_meter=1):
-        pos = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        pos = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.line(screen, (0, 255, 0), pos - [5, 0], pos + [5, 0], 2)]
 
 
@@ -142,7 +142,7 @@ class XConstraint:
         self.rot1 = self.body1.p[0]
 
     def draw(self, screen, pixels_per_meter=1):
-        pos = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        pos = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.line(screen, (0, 255, 0), pos - [0, 5], pos + [0, 5], 2)]
 
 
@@ -169,7 +169,7 @@ class RotConstraint:
         self.rot1 = self.body1.p[0]
 
     def draw(self, screen, pixels_per_meter=1):
-        pos = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        pos = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.circle(screen, (0, 255, 0), pos, 5, 1)]
 
 
@@ -200,7 +200,7 @@ class TotalConstraint:
         self.pos = self.body1.pos + self.pos1
 
     def draw(self, screen, pixels_per_meter=1):
-        pos = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+        pos = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         return [pygame.draw.circle(screen, (0, 255, 0), pos + 1, 5, 1),
                 pygame.draw.line(screen, (0, 255, 0), pos - [5, 0], pos + [5, 0], 2),
                 pygame.draw.line(screen, (0, 255, 0), pos - [0, 5], pos + [0, 5], 2)]
