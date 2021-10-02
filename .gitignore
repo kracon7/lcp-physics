@@ -1,6 +1,6 @@
 build
 dist
-videos
+videos/frames
 experimental
 *.egg-info
 *.pyc
@@ -9,7 +9,6 @@ experimental
 *.bak
 *.mp4
 *.avi
-*.png
 *.bmp
 *.lprof
 .DS_Store
