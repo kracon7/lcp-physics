@@ -20,7 +20,7 @@ TIME = 10
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
-def make_world(particle_pos, hand):
+def make_world(particle_pos, particle_radius, hand):
     '''
     build world based on particle positions
     '''
@@ -28,33 +28,38 @@ def make_world(particle_pos, hand):
     joints = []
     fric_coeff = 0.15
 
-    composite_body = Composite(particle_pos, 20)
+    composite_body = Composite(particle_pos, particle_radius)
     bodies += composite_body.bodies
     joints += composite_body.joints
 
     c = Circle(hand, 60)
     bodies.append(c)
 
-    initial_force = torch.FloatTensor([0, 3, 0]).to(DEVICE)
+    inclination = math.pi * 17/ 32
+    r = Rect([inclination, 900, 450], [400, 10])
+    bodies.append(r)
+    joints.append(TotalConstraint(r))
+
+    initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
     initial_force[2] = 0
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo
-    learned_force = lambda t: initial_force if t < 0.2 else ExternalForce.ZEROS
+    learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c.add_force(ExternalForce(learned_force))
 
     world = World(bodies, joints, dt=DT)
     return world
     
 
-def fixed_joint_demo(screen, particle_pos):
+def fixed_joint_demo(screen, particle_pos, particle_radius):
     # particle_pos = np.array([[500, 300],
     #                          [500, 340],
     #                          [500, 380],
     #                          [540, 300],
     #                          [580, 300],
     #                          [500, 420]])
-    world = make_world(particle_pos, [200, 300])
+    world = make_world(particle_pos, particle_radius, [300, 350])
     recorder = None
     # recorder = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=recorder)
@@ -77,6 +82,8 @@ if __name__ == '__main__':
     x_cord, y_cord = np.where(img[:,:,0]<1)
     x_cord, y_cord = x_cord - x_cord.min(), y_cord - y_cord.min()
 
-    particle_pos = 40 * np.stack([x_cord, y_cord]).T + np.array([400, 300])
+    radius = 10
 
-    fixed_joint_demo(screen, particle_pos)
+    particle_pos = 2 * radius * np.stack([x_cord, y_cord]).T + np.array([400, 300])
+
+    fixed_joint_demo(screen, particle_pos, radius)

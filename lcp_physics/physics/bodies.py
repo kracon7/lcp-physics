@@ -4,6 +4,7 @@ import math
 import ode
 import pygame
 import scipy.spatial as spatial
+import numpy as np
 
 import torch
 
@@ -306,18 +307,27 @@ class Rect(Hull):
 
 class Composite():
     """rigid body based on particle formulation"""
-    def __init__(self, particle_pos, radius, fric_coeff=0.15):
+    def __init__(self, particle_pos, radius, mass=0.01, fric_coeff=0.15):
+        '''
+        Input:
+            particle_pos -- ndarray (N, 2) 2D position of particles
+            radius -- radius of each particle
+            mass -- float or ndarray (N,), mass of each particle
+            fric_coeff -- friction coefficient
+        '''
         # super(ClassName, self).__init__()
         # self.args = args
 
         bodies = []
         joints = []
         N = particle_pos.shape[0]
+        if isinstance(mass, float):
+            mass = mass * np.ones(N)
 
         for i in range(N-1):
             p1, p2 = particle_pos[i], particle_pos[i+1]
-            c1 = Circle(p1, radius)
-            c2 = Circle(p2, radius)
+            c1 = Circle(p1, radius, mass=mass[i])
+            c2 = Circle(p2, radius, mass=mass[i])
 
             if i == 0:
                 bodies.append(c1)
@@ -334,8 +344,6 @@ class Composite():
 
         self.bodies = bodies
         self.joints = joints
-
-        
 
     def find_neighbors(self, particle_pos, radius):
         '''
