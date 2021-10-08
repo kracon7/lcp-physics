@@ -1,7 +1,10 @@
+from collections import defaultdict
 import math
 
 import ode
 import pygame
+import scipy.spatial as spatial
+import numpy as np
 
 import torch
 
@@ -304,17 +307,27 @@ class Rect(Hull):
 
 class Composite():
     """rigid body based on particle formulation"""
-    def __init__(self, particle_pos, radius, fric_coeff=0.15):
+    def __init__(self, particle_pos, radius, mass=0.01, fric_coeff=0.15):
+        '''
+        Input:
+            particle_pos -- ndarray (N, 2) 2D position of particles
+            radius -- radius of each particle
+            mass -- float or ndarray (N,), mass of each particle
+            fric_coeff -- friction coefficient
+        '''
         # super(ClassName, self).__init__()
         # self.args = args
 
         bodies = []
         joints = []
         N = particle_pos.shape[0]
+        if isinstance(mass, float):
+            mass = mass * np.ones(N)
+
         for i in range(N-1):
             p1, p2 = particle_pos[i], particle_pos[i+1]
-            c1 = Circle(p1, radius)
-            c2 = Circle(p2, radius)
+            c1 = Circle(p1, radius, mass=mass[i])
+            c2 = Circle(p2, radius, mass=mass[i])
 
             if i == 0:
                 bodies.append(c1)
@@ -322,5 +335,27 @@ class Composite():
 
             joints += [FixedJoint(bodies[0], bodies[-1])]
 
+        # add contact exclusion
+        no_contact = self.find_neighbors(particle_pos, radius)
+        for i in range(N):
+            neighbors = no_contact[i]
+            for j in neighbors:
+                bodies[i].add_no_contact(bodies[j])
+
         self.bodies = bodies
         self.joints = joints
+
+    def find_neighbors(self, particle_pos, radius):
+        '''
+        find neighbors of particles for contact exlusion
+        '''
+        point_tree = spatial.cKDTree(particle_pos)
+        neighbors_list = point_tree.query_ball_point(particle_pos, 2.5*radius)
+
+        no_contact = defaultdict(list)
+        for i in range(particle_pos.shape[0]):
+            neighbors = neighbors_list[i]
+            neighbors.remove(i)
+            no_contact[i] = neighbors
+
+        return no_contact
