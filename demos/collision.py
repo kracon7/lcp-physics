@@ -35,8 +35,10 @@ def make_world(radius):
     c2 = Circle([pos[0]+2*radius, pos[1]+5], radius, fric_coeff=fric_coeff)
     bodies.append(c2)
 
+    c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff=fric_coeff)
+    bodies.append(c3)
+
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
-    initial_force[2] = 0
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo

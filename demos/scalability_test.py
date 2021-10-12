@@ -41,7 +41,6 @@ def make_world(particle_pos, particle_radius, hand):
     joints.append(TotalConstraint(r))
 
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
-    initial_force[2] = 0
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo

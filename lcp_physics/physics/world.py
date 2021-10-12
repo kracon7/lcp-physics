@@ -172,9 +172,9 @@ class World:
     def Jc(self):
         Jc = self._M.new_zeros(len(self.contacts), self.vec_len * len(self.bodies))
         for i, contact in enumerate(self.contacts):
-            c = contact[0]  # c = (normal, contact_pt_1, contact_pt_2)
-            i1 = contact[1]
-            i2 = contact[2]
+            c = contact[0]   # c = (normal, contact_pt_1, contact_pt_2)
+            i1 = contact[1]  # body 1 index
+            i2 = contact[2]  # body 2 index
             J1 = torch.cat([cross_2d(c[1], c[0]).reshape(1, 1),
                             c[0].unsqueeze(0)], dim=1)
             J2 = -torch.cat([cross_2d(c[2], c[0]).reshape(1, 1),
