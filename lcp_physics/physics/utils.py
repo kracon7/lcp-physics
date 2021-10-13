@@ -22,6 +22,7 @@ class Defaults:
     RESTITUTION = 0
 
     mu_s = 0.1
+    mu_b = [0.1, 0.01]
     FRIC_DIRS = 2
 
     FPS = 30

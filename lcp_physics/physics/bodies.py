@@ -20,7 +20,7 @@ class Body(object):
     """Base class for bodies.
     """
     def __init__(self, pos, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 mu_s=Defaults.mu_s, eps=Defaults.EPSILON,
+                 mu_s=Defaults.mu_s, mu_b=Defaults.mu_b, eps=Defaults.EPSILON,
                  col=(255, 0, 0), thickness=1):
         # get base tensor to define dtype, device and layout for others
         self._set_base_tensor(locals().values())
@@ -51,6 +51,7 @@ class Body(object):
         self.M[ang_sizes[0]:, ang_sizes[1]:] = torch.eye(DIM).type_as(self.M) * self.mass
 
         self.mu_s = get_tensor(mu_s, base_tensor=self._base_tensor)
+        self.mu_b = get_tensor(mu_b, base_tensor=self._base_tensor)
         self.restitution = get_tensor(restitution, base_tensor=self._base_tensor)
         self.forces = []
 

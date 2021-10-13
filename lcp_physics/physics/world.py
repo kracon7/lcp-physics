@@ -239,6 +239,13 @@ class World:
             mu_s[i] = 0.5 * (self.bodies[i1].mu_s + self.bodies[i2].mu_s)
         return torch.diag(mu_s)
 
+    def mu_b(self):
+        mu_b = self._M.new_zeros(3*len(self.bodies))
+        for i, b in enumerate(self.bodies):
+            mu_b[3*i:3*(i+1)] = torch.stack([b.mu_b[1], b.mu_b[0], b.mu_b[0]])
+
+        return mu_b
+
     def E(self):
         return self._memoized_E(len(self.contacts))
 

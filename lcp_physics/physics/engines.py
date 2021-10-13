@@ -66,22 +66,30 @@ class PdipmEngine(Engine):
             E = world.E().unsqueeze(0)
             mu_s = world.mu_s().unsqueeze(0)
             Js = world.Js().unsqueeze(0)
-            G = torch.cat([Jc, 
-                           Js,
-                           Js.new_zeros(Js.size(0), ncon, 3*nbody)
-                        ], dim=1)
-            
+            Jb = world.Jb().unsqueeze(0)
             # G = torch.cat([Jc, 
             #                Js,
-            #                Js.new_zeros(Js.size(0), mu_s.size(1), Js.size(2)),
-            #                Jb,
-            #                Jb.new_zeros(M.size(0), M.size(1), M.size(2))
+            #                Js.new_zeros(Js.size(0), ncon, 3*nbody)
             #             ], dim=1)
+            
+            G = torch.cat([Jc, 
+                           Js,
+                           Js.new_zeros(Js.size(0), mu_s.size(1), Js.size(2)),
+                           Jb,
+                           Jb.new_zeros(M.size(0), M.size(1), M.size(2))
+                        ], dim=1)
             F = G.new_zeros(G.size(1), G.size(1)).unsqueeze(0)
             F[:,   ncon:3*ncon, 3*ncon:4*ncon] = E
             F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
             F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
-            h = torch.cat([v, v.new_zeros(v.size(0), 3*ncon)], 1)   # m in Eq.(2)
+            F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = 
+                                    torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
+            F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = 
+                                   -torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
+            h = torch.cat([v, 
+                           v.new_zeros(v.size(0), 3*ncon+2*nbody),
+                           world.mu_b() * torch.diag(world.M())
+                        ], dim=1)   # m in Eq.(2)
 
             x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
