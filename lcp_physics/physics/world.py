@@ -210,6 +210,25 @@ class World:
             i2 * self.vec_len:(i2 + 1) * self.vec_len] = -J2
         return Js
 
+    def Jb(self):
+        '''
+        Jacobian matrix for bottom friction
+        '''
+        Jb = self._M.new_zeros(2*len(self.bodies), 3*len(self.bodies))
+        v = self.get_v()
+
+        for i, b in enumerate(self.bodies):
+            vi = v[i*3 : (i+1)*3]
+            Ji = torch.cat[
+                    torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]).unsqueeze(0),
+                    torch.cat([self._M.new_zeros(1), -vi[1:] / torch.norm(vi[1:])]).unsqueeze(0)
+                 ], dim=0
+            Jb[2*i:2*(i+1), 3*i:3*(i+1)] = Ji
+        return Jb
+
+    
+
+
     def mu_s(self):
         return self._memoized_mu_s(*[(c[1], c[2]) for c in self.contacts])
 
