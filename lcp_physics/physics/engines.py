@@ -63,15 +63,15 @@ class PdipmEngine(Engine):
             v = v.unsqueeze(0)
             E = world.E().unsqueeze(0)
             mu = world.mu().unsqueeze(0)
-            Jf = world.Jf().unsqueeze(0)
-            G = torch.cat([Jc, Jf,
-                           Jf.new_zeros(Jf.size(0), mu.size(1), Jf.size(2))], dim=1)
+            Js = world.Js().unsqueeze(0)
+            G = torch.cat([Jc, Js,
+                           Js.new_zeros(Js.size(0), mu.size(1), Js.size(2))], dim=1)
             F = G.new_zeros(G.size(1), G.size(1)).unsqueeze(0)
             F[:, Jc.size(1):-E.size(2), -E.size(2):] = E
             F[:, -mu.size(1):, :mu.size(2)] = mu
             F[:, -mu.size(1):, mu.size(2):mu.size(2) + E.size(1)] = \
                 -E.transpose(1, 2)
-            h = torch.cat([v, v.new_zeros(v.size(0), Jf.size(1) + mu.size(1))], 1)   # m in Eq.(2)
+            h = torch.cat([v, v.new_zeros(v.size(0), Js.size(1) + mu.size(1))], 1)   # m in Eq.(2)
 
             x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
