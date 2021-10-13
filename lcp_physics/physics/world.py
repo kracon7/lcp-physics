@@ -226,9 +226,6 @@ class World:
             Jb[2*i:2*(i+1), 3*i:3*(i+1)] = Ji
         return Jb
 
-    
-
-
     def mu_s(self):
         return self._memoized_mu_s(*[(c[1], c[2]) for c in self.contacts])
 
@@ -238,8 +235,8 @@ class World:
         for i, contacts in enumerate(self.contacts):
             i1 = contacts[1]
             i2 = contacts[2]
-            # mu_s[i] = torch.sqrt(self.bodies[i1].fric_coeff * self.bodies[i2].fric_coeff)
-            mu_s[i] = 0.5 * (self.bodies[i1].fric_coeff + self.bodies[i2].fric_coeff)
+            # mu_s[i] = torch.sqrt(self.bodies[i1].mu_s * self.bodies[i2].mu_s)
+            mu_s[i] = 0.5 * (self.bodies[i1].mu_s + self.bodies[i2].mu_s)
         return torch.diag(mu_s)
 
     def E(self):

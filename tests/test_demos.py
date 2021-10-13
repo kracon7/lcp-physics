@@ -139,7 +139,7 @@ class TestDemos(unittest.TestCase):
     def testFric(self):
 
         restitution = 0.75
-        fric_coeff = 1
+        mu_s = 1
 
         bodies = []
         joints = []
@@ -150,20 +150,20 @@ class TestDemos(unittest.TestCase):
             else:
                 return ExternalForce.ZEROS
 
-        r = Rect([400, 400], [900, 10], restitution=restitution, fric_coeff=fric_coeff)
+        r = Rect([400, 400], [900, 10], restitution=restitution, mu_s=mu_s)
         bodies.append(r)
         r.add_force(ExternalForce(timed_force, multiplier=100))
         r.add_force(ExternalForce(down_force, multiplier=100))
 
-        c = Circle([200, 364], 30, restitution=restitution, fric_coeff=fric_coeff)
+        c = Circle([200, 364], 30, restitution=restitution, mu_s=mu_s)
         bodies.append(c)
         c.add_force(ExternalForce(down_force, multiplier=100))
 
-        c = Circle([50, 436], 30, restitution=restitution, fric_coeff=fric_coeff)
+        c = Circle([50, 436], 30, restitution=restitution, mu_s=mu_s)
         bodies.append(c)
         joints.append(XConstraint(c))
         joints.append(YConstraint(c))
-        c = Circle([800, 436], 30, restitution=restitution, fric_coeff=fric_coeff)
+        c = Circle([800, 436], 30, restitution=restitution, mu_s=mu_s)
         bodies.append(c)
         joints.append(XConstraint(c))
         joints.append(YConstraint(c))

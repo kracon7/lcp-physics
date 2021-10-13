@@ -54,7 +54,7 @@ RIGHT_STOPPER_COLOR = ATARI_RED
 
 # Physics parameters
 DT = 1
-FRIC_COEFF = 0
+mu_s = 0
 BALL_MASS = 1
 STD_RESTITUTION = 1
 STOPPER_RESTITUTION = -STD_RESTITUTION
@@ -152,14 +152,14 @@ def make_world(paddle_params, blocks_params, ball_params, ball_vel):
     # Add ball if it exists
     ball_pos, ball_rad = ball_params
     ball_body = Circle(ball_pos, ball_rad, vel=ball_vel, mass=BALL_MASS,
-                       restitution=STD_RESTITUTION, fric_coeff=FRIC_COEFF,
+                       restitution=STD_RESTITUTION, mu_s=mu_s,
                        col=BALL_COLOR, thickness=0)
     bodies.append(ball_body)
 
     # Add paddle
     paddle_pos, paddle_dims = paddle_params
     paddle_body = Rect(paddle_pos, paddle_dims, restitution=STD_RESTITUTION,
-                       fric_coeff=FRIC_COEFF, col=PADDLE_COLOR, thickness=0)
+                       mu_s=mu_s, col=PADDLE_COLOR, thickness=0)
     bodies.append(paddle_body)
     constraints += [
         # YConstraint(paddle_body),
@@ -169,19 +169,19 @@ def make_world(paddle_params, blocks_params, ball_params, ball_vel):
 
     # Add walls
     left_wall = Rect([WALL_WIDTH / 2.0, STOPPER_LINE / 2.0], [WALL_WIDTH, STOPPER_LINE],
-                     restitution=STD_RESTITUTION, fric_coeff=FRIC_COEFF,
+                     restitution=STD_RESTITUTION, mu_s=mu_s,
                      col=WALL_COLOR, thickness=0)
     constraints.append(TotalConstraint(left_wall))
     left_wall.add_no_contact(paddle_body)
     bodies.append(left_wall)
     right_wall = Rect([SCREEN_WIDTH - WALL_WIDTH / 2.0, (STOPPER_LINE + STOPPER_HEIGHT) / 2.0],
                       [WALL_WIDTH, STOPPER_LINE + STOPPER_HEIGHT], restitution=STD_RESTITUTION,
-                      fric_coeff=FRIC_COEFF, col=WALL_COLOR, thickness=0)
+                      mu_s=mu_s, col=WALL_COLOR, thickness=0)
     constraints.append(TotalConstraint(right_wall))
     paddle_body.add_no_contact(right_wall)
     bodies.append(right_wall)
     roof = Rect([SCREEN_WIDTH / 2.0, ROOF_LINE / 2.0], [SCREEN_WIDTH - 2 * WALL_WIDTH, ROOF_LINE],
-                restitution=STD_RESTITUTION, fric_coeff=FRIC_COEFF,
+                restitution=STD_RESTITUTION, mu_s=mu_s,
                 col=WALL_COLOR, thickness=0)
     roof.add_no_contact(paddle_body)
     roof.add_no_contact(left_wall)
@@ -192,7 +192,7 @@ def make_world(paddle_params, blocks_params, ball_params, ball_vel):
     # Add stoppers
     left_stopper = Rect([STOPPER_WIDTH / 2.0, STOPPER_LINE + STOPPER_HEIGHT / 2.0],
                         [STOPPER_WIDTH, STOPPER_HEIGHT], restitution=STOPPER_RESTITUTION,
-                        fric_coeff=FRIC_COEFF, col=LEFT_STOPPER_COLOR, thickness=0)
+                        mu_s=mu_s, col=LEFT_STOPPER_COLOR, thickness=0)
     constraints.append(TotalConstraint(left_stopper))
     bodies.append(left_stopper)
     left_stopper.add_no_contact(left_wall)
@@ -200,7 +200,7 @@ def make_world(paddle_params, blocks_params, ball_params, ball_vel):
 
     right_stopper = Rect([SCREEN_WIDTH + STOPPER_WIDTH / 2.0, STOPPER_LINE + STOPPER_HEIGHT / 2.0],
                          [STOPPER_WIDTH, STOPPER_HEIGHT], restitution=STOPPER_RESTITUTION,
-                         fric_coeff=FRIC_COEFF, col=WALL_COLOR, thickness=0)
+                         mu_s=mu_s, col=WALL_COLOR, thickness=0)
     constraints.append(TotalConstraint(right_stopper))
     bodies.append(right_stopper)
     right_stopper.add_no_contact(right_wall)
@@ -215,7 +215,7 @@ def make_world(paddle_params, blocks_params, ball_params, ball_vel):
         # TODO Define restitution by level? (different levels have different bounces)
         block_restitution = 1
         block_body = Rect(block_pos, block_dims, restitution=block_restitution,
-                          fric_coeff=FRIC_COEFF, col=BLOCK_COLORS[level], thickness=0)
+                          mu_s=mu_s, col=BLOCK_COLORS[level], thickness=0)
         bodies.append(block_body)
         blocks_bodies.append(block_body)
         constraints.append(TotalConstraint(block_body))

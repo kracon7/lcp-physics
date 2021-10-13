@@ -20,7 +20,7 @@ class Body(object):
     """Base class for bodies.
     """
     def __init__(self, pos, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
+                 mu_s=Defaults.mu_s, eps=Defaults.EPSILON,
                  col=(255, 0, 0), thickness=1):
         # get base tensor to define dtype, device and layout for others
         self._set_base_tensor(locals().values())
@@ -50,7 +50,7 @@ class Body(object):
         self.M[:ang_sizes[0], :ang_sizes[1]] = self.ang_inertia
         self.M[ang_sizes[0]:, ang_sizes[1]:] = torch.eye(DIM).type_as(self.M) * self.mass
 
-        self.fric_coeff = get_tensor(fric_coeff, base_tensor=self._base_tensor)
+        self.mu_s = get_tensor(mu_s, base_tensor=self._base_tensor)
         self.restitution = get_tensor(restitution, base_tensor=self._base_tensor)
         self.forces = []
 
@@ -119,12 +119,12 @@ class Body(object):
 
 class Circle(Body):
     def __init__(self, pos, rad, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
+                 mu_s=Defaults.mu_s, eps=Defaults.EPSILON,
                  col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.rad = get_tensor(rad, base_tensor=self._base_tensor)
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         mu_s=mu_s, eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
         return mass * self.rad * self.rad / 2
@@ -164,7 +164,7 @@ class Hull(Body):
        centroid's frame. Object position is set to centroid.
     """
     def __init__(self, ref_point, vertices, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
+                 mu_s=Defaults.mu_s, eps=Defaults.EPSILON,
                  col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         ref_point = get_tensor(ref_point, base_tensor=self._base_tensor)
@@ -178,7 +178,7 @@ class Hull(Body):
         # store last separating edge for SAT
         self.last_sat_idx = 0
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         mu_s=mu_s, eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
         numerator = 0
@@ -256,7 +256,7 @@ class Hull(Body):
 
 class Rect(Hull):
     def __init__(self, pos, dims, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
+                 mu_s=Defaults.mu_s, eps=Defaults.EPSILON,
                  col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.dims = get_tensor(dims, base_tensor=self._base_tensor)
@@ -266,7 +266,7 @@ class Rect(Hull):
         verts = [v0, v1, -v0, -v1]
         ref_point = pos[-2:]
         super().__init__(ref_point, verts, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         mu_s=mu_s, eps=eps, col=col, thickness=thickness)
         if pos.size(0) == 3:
             self.set_p(pos)
 
@@ -307,13 +307,13 @@ class Rect(Hull):
 
 class Composite():
     """rigid body based on particle formulation"""
-    def __init__(self, particle_pos, radius, mass=0.01, fric_coeff=0.15):
+    def __init__(self, particle_pos, radius, mass=0.01, mu_s=0.15):
         '''
         Input:
             particle_pos -- ndarray (N, 2) 2D position of particles
             radius -- radius of each particle
             mass -- float or ndarray (N,), mass of each particle
-            fric_coeff -- friction coefficient
+            mu_s -- friction coefficient
         '''
         # super(ClassName, self).__init__()
         # self.args = args

@@ -68,26 +68,26 @@ class TestHull(unittest.TestCase):
         bodies = []
         joints = []
         restitution = 0.5
-        fric_coeff = 0.2
+        mu_s = 0.2
 
         clock = Circle([975, 575], 20, vel=[1, 0, 0])
         bodies.append(clock)
 
         p1 = Hull([500, 300], [[450, 5], [-450, 5], [-450, -5], [450, -5]],
-                  restitution=restitution, fric_coeff=fric_coeff)
+                  restitution=restitution, mu_s=mu_s)
         p1.rotate_verts(get_tensor(math.pi / 32))
         bodies.append(p1)
         joints.append(TotalConstraint(p1))
 
         # Rectangle
         # p2 = Hull([100, 100], [[30, 30], [-30, 30], [-30, -30], [30, -30]],
-        #           restitution=restitution, fric_coeff=fric_coeff)
+        #           restitution=restitution, mu_s=mu_s)
         # Pentagon
         p2 = Hull([100, 100], [[50, 0], [30, 50], [-30, 30], [-50, -30], [0, -50]],
-                  restitution=restitution, fric_coeff=fric_coeff)
+                  restitution=restitution, mu_s=mu_s)
         # Hexagon
         p2 = Hull([100, 100], [[50, 0], [30, 50], [-30, 30], [-50, -30], [0, -50], [30, -30]],
-                  restitution=restitution, fric_coeff=fric_coeff)
+                  restitution=restitution, mu_s=mu_s)
         bodies.append(p2)
         p2.add_force(ExternalForce(down_force, multiplier=100))
         # p2.add_force(ExternalForce(hor_impulse, multiplier=-100))
