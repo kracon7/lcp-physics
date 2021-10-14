@@ -69,15 +69,15 @@ class PdipmEngine(Engine):
             F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
             F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
             F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
-                                    0.9999*torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
+                                    torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
             F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
-                                   -0.9999*torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
+                                   -torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
             h = torch.cat([v, 
                            v.new_zeros(v.size(0), 3*ncon+2*nbody),
-                           (world.mu_b() * torch.diag(world.M()).unsqueeze(0))
+                           (0.5 * world.mu_b() * torch.diag(world.M()).unsqueeze(0))
                         ], dim=1)   # m in Eq.(2)
 
-            x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)
+            x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1).apply(M, u, G, h, Je, b, F)
         else:
             # Solve Mixed LCP (Kline 2.7.2)
             Jc = world.Jc()

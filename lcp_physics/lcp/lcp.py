@@ -18,7 +18,7 @@ class LCPFunction(Function):
         self.max_iter = max_iter
         self.Q_LU = self.S_LU = self.R = None
 
-    # @profile
+    @staticmethod
     def forward(self, Q, p, G, h, A, b, F):
         _, nineq, nz = G.size()
         neq = A.size(1) if A.ndimension() > 1 else 0
@@ -34,6 +34,7 @@ class LCPFunction(Function):
         self.save_for_backward(zhats, Q, p, G, h, A, b, F)
         return zhats
 
+    @staticmethod
     def backward(self, dl_dzhat):
         zhats, Q, p, G, h, A, b, F = self.saved_tensors
         batch_size = extract_batch_size(Q, p, G, h, A, b)
