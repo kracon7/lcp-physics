@@ -69,9 +69,9 @@ class PdipmEngine(Engine):
             F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
             F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
             F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
-                                    0.99*torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
+                                    0.9999*torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
             F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
-                                   -0.99*torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
+                                   -0.9999*torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
             h = torch.cat([v, 
                            v.new_zeros(v.size(0), 3*ncon+2*nbody),
                            (world.mu_b() * torch.diag(world.M()).unsqueeze(0))

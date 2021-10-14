@@ -1,6 +1,7 @@
 import os
 import sys
 
+import time
 import math
 import cv2
 import pygame
@@ -50,11 +51,85 @@ def make_world(radius):
     
 
 def fixed_joint_demo(screen):
+    run_time=10
     radius = 30
     world = make_world(radius)
     recorder = None
     # recorder = Recorder(DT, screen)
-    run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+    
+    if screen is not None:
+        import pygame
+        background = pygame.Surface(screen.get_size())
+        background = background.convert()
+        background.fill((255, 255, 255))
+    
+    animation_dt = float(world.dt)
+    elapsed_time = 0.
+    prev_frame_time = -animation_dt
+    start_time = time.time()
+
+    f_log, v_log = [], []
+
+    while world.t < run_time:
+        world.step()
+
+        # record the force and velocities
+        f = world.apply_forces(world.t).detach().numpy()
+        v = world.get_v().detach().numpy()
+
+        f_log.append(f)
+        v_log.append(v)
+
+        if screen is not None:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return
+
+            if elapsed_time - prev_frame_time >= animation_dt or recorder:
+                prev_frame_time = elapsed_time
+
+                screen.blit(background, (0, 0))
+                update_list = []
+                for body in world.bodies:
+                    update_list += body.draw(screen, pixels_per_meter=1)
+                for joint in world.joints:
+                    update_list += joint[0].draw(screen, pixels_per_meter=1)
+
+                if not recorder:
+                    # Don't refresh screen if recording
+                    pygame.display.update(update_list)
+                    # pygame.display.flip()  # XXX
+                else:
+                    recorder.record(world.t)
+
+            elapsed_time = time.time() - start_time
+            if not recorder:
+                # Adjust frame rate dynamically to keep real time
+                wait_time = world.t - elapsed_time
+                if wait_time >= 0 and not recorder:
+                    wait_time += animation_dt  # XXX
+                    time.sleep(max(wait_time - animation_dt, 0))
+                #     animation_dt -= 0.005 * wait_time
+                # elif wait_time < 0:
+                #     animation_dt += 0.005 * -wait_time
+                # elapsed_time = time.time() - start_time
+
+        elapsed_time = time.time() - start_time
+        print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
+                                               1 / animation_dt), end='')
+
+    fig, ax = plt.subplots(6,1)
+    f_log = np.stack(f_log)
+    v_log = np.stack(v_log)
+
+    ax[0].plot(f_log[:, 0])
+    ax[1].plot(v_log[:, 0])
+    ax[2].plot(f_log[:, 1])
+    ax[3].plot(v_log[:, 1])
+    ax[4].plot(f_log[:, 2])
+    ax[5].plot(v_log[:, 2])
+
+    plt.show()
 
 
 if __name__ == '__main__':
