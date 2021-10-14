@@ -82,13 +82,13 @@ class PdipmEngine(Engine):
             F[:,   ncon:3*ncon, 3*ncon:4*ncon] = E
             F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
             F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
-            F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = 
+            F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
                                     torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
-            F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = 
+            F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
                                    -torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
             h = torch.cat([v, 
                            v.new_zeros(v.size(0), 3*ncon+2*nbody),
-                           world.mu_b() * torch.diag(world.M())
+                           (world.mu_b() * torch.diag(world.M()).unsqueeze(0))
                         ], dim=1)   # m in Eq.(2)
 
             x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)

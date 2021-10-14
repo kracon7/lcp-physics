@@ -219,10 +219,16 @@ class World:
 
         for i, b in enumerate(self.bodies):
             vi = v[i*3 : (i+1)*3]
-            Ji = torch.cat[
-                    torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]).unsqueeze(0),
-                    torch.cat([self._M.new_zeros(1), -vi[1:] / torch.norm(vi[1:])]).unsqueeze(0)
-                 ], dim=0
+            if torch.norm(vi[1:]) == 0:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        self._M.new_zeros(3)
+                     ])
+            else:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        torch.cat([self._M.new_zeros(1), vi[1:] / torch.norm(vi[1:])])
+                     ])
             Jb[2*i:2*(i+1), 3*i:3*(i+1)] = Ji
         return Jb
 
