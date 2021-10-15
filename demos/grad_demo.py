@@ -12,7 +12,7 @@ from lcp_physics.physics.forces import ExternalForce, down_force
 from lcp_physics.physics.world import World, run_world
 from lcp_physics.physics.utils import Recorder, plot, Defaults
 
-TIME = 9
+TIME = 5
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
@@ -93,7 +93,7 @@ def make_world(learned_force):
     target = Circle([500, 300], 30)
     bodies.append(target)
  
-    c1 = Circle([250, 210], 30)
+    c1 = Circle([350, 210], 30)
     bodies.append(c1)
     c1.add_force(ExternalForce(learned_force))
     c1.add_no_contact(target)
