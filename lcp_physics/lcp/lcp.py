@@ -4,58 +4,66 @@ from torch.autograd import Function
 from .solvers import pdipm
 from .util import bger, extract_batch_size
 
-
-class LCPFunction(Function):
-    """A differentiable LCP solver, uses the primal dual interior point method
-       implemented in pdipm.
-    """
+class LCPOptions():
     def __init__(self, eps=1e-12, verbose=-1, not_improved_lim=3,
                  max_iter=10):
-        super().__init__()
         self.eps = eps
         self.verbose = verbose
         self.not_improved_lim = not_improved_lim
         self.max_iter = max_iter
-        self.Q_LU = self.S_LU = self.R = None
+        
+
+class LCPFunction(Function):
+    # """A differentiable LCP solver, uses the primal dual interior point method
+    #    implemented in pdipm.
+    # """
+    # def __init__(self, eps=1e-12, verbose=-1, not_improved_lim=3,
+    #              max_iter=10):
+    #     super().__init__()
+    #     self.eps = eps
+    #     self.verbose = verbose
+    #     self.not_improved_lim = not_improved_lim
+    #     self.max_iter = max_iter
+    #     self.Q_LU = self.S_LU = self.R = None
 
     @staticmethod
-    def forward(self, Q, p, G, h, A, b, F):
+    def forward(ctx, Q, p, G, h, A, b, F, lcp_options):
         _, nineq, nz = G.size()
         neq = A.size(1) if A.ndimension() > 1 else 0
         assert(neq > 0 or nineq > 0)
-        self.neq, self.nineq, self.nz = neq, nineq, nz
+        ctx.neq, ctx.nineq, ctx.nz = neq, nineq, nz
 
-        self.Q_LU, self.S_LU, self.R = pdipm.pre_factor_kkt(Q, G, F, A)
-        zhats, self.nus, self.lams, self.slacks = pdipm.forward(
-            Q, p, G, h, A, b, F, self.Q_LU, self.S_LU, self.R,
-            eps=self.eps, max_iter=self.max_iter, verbose=self.verbose,
-            not_improved_lim=self.not_improved_lim)
+        ctx.Q_LU, ctx.S_LU, ctx.R = pdipm.pre_factor_kkt(Q, G, F, A)
+        zhats, ctx.nus, ctx.lams, ctx.slacks = pdipm.forward(
+            Q, p, G, h, A, b, F, ctx.Q_LU, ctx.S_LU, ctx.R,
+            eps=lcp_options.eps, max_iter=lcp_options.max_iter, verbose=lcp_options.verbose,
+            not_improved_lim=lcp_options.not_improved_lim)
 
-        self.save_for_backward(zhats, Q, p, G, h, A, b, F)
+        ctx.save_for_backward(zhats, Q, p, G, h, A, b, F)
         return zhats
 
     @staticmethod
-    def backward(self, dl_dzhat):
-        zhats, Q, p, G, h, A, b, F = self.saved_tensors
+    def backward(ctx, dl_dzhat):
+        zhats, Q, p, G, h, A, b, F = ctx.saved_tensors
         batch_size = extract_batch_size(Q, p, G, h, A, b)
 
-        neq, nineq, nz = self.neq, self.nineq, self.nz
+        neq, nineq, nz = ctx.neq, ctx.nineq, ctx.nz
 
-        # D = torch.diag((self.lams / self.slacks).squeeze(0)).unsqueeze(0)
-        d = self.lams / self.slacks
+        # D = torch.diag((ctx.lams / ctx.slacks).squeeze(0)).unsqueeze(0)
+        d = ctx.lams / ctx.slacks
 
-        pdipm.factor_kkt(self.S_LU, self.R, d)
-        dx, _, dlam, dnu = pdipm.solve_kkt(self.Q_LU, d, G, A, self.S_LU,
+        pdipm.factor_kkt(ctx.S_LU, ctx.R, d)
+        dx, _, dlam, dnu = pdipm.solve_kkt(ctx.Q_LU, d, G, A, ctx.S_LU,
                                            dl_dzhat, G.new_zeros(batch_size, nineq),
                                            G.new_zeros(batch_size, nineq),
                                            G.new_zeros(batch_size, neq))
 
         dps = dx
-        dGs = (bger(dlam, zhats) + bger(self.lams, dx))
-        dFs = -bger(dlam, self.lams)
+        dGs = (bger(dlam, zhats) + bger(ctx.lams, dx))
+        dFs = -bger(dlam, ctx.lams)
         dhs = -dlam
         if neq > 0:
-            dAs = bger(dnu, zhats) + bger(self.nus, dx)
+            dAs = bger(dnu, zhats) + bger(ctx.nus, dx)
             dbs = -dnu
         else:
             dAs, dbs = None, None

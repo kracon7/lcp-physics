@@ -5,7 +5,7 @@ Based on: M. B. Cline, Rigid body simulation with contact and constraints, 2002
 
 import torch
 
-from lcp_physics.lcp.lcp import LCPFunction
+from lcp_physics.lcp.lcp import LCPFunction, LCPOptions
 
 
 class Engine:
@@ -18,6 +18,7 @@ class PdipmEngine(Engine):
     """Engine that uses the primal dual interior point method LCP solver.
     """
     def __init__(self, max_iter=10):
+        self.lcp_options = LCPOptions(max_iter=max_iter)
         self.lcp_solver = LCPFunction
         self.cached_inverse = None
         self.max_iter = max_iter
@@ -33,95 +34,51 @@ class PdipmEngine(Engine):
         u = torch.matmul(world.M(), world.get_v()) + dt * f
         if neq > 0:
             u = torch.cat([u, u.new_zeros(neq)])
-        if not world.contacts:
             
-            # Solve Mixed LCP (Kline 2.7.2)
-            Jc = world.Jc()
-            ncon = Jc.size(0)   # number of contacts
-            v = torch.matmul(Jc, world.get_v()) * world.restitutions()
-            M = world.M().unsqueeze(0)
-            if neq > 0:
-                b = Je.new_zeros(Je.size(0)).unsqueeze(0)
-                Je = Je.unsqueeze(0)
-            else:
-                b = torch.tensor([])
-                Je = torch.tensor([])
-            Jc = Jc.unsqueeze(0)
-            u = u[:world.M().size(0)].unsqueeze(0)
-            v = v.unsqueeze(0)
-            E = world.E().unsqueeze(0)
-            mu_s = world.mu_s().unsqueeze(0)
-            Js = world.Js().unsqueeze(0)
-            Jb = world.Jb().unsqueeze(0)
-            # G = torch.cat([Jc, 
-            #                Js,
-            #                Js.new_zeros(Js.size(0), ncon, 3*nbody)
-            #             ], dim=1)
-            
-            G = torch.cat([Jc, 
-                           Js,
-                           Js.new_zeros(Js.size(0), mu_s.size(1), Js.size(2)),
-                           Jb,
-                           Jb.new_zeros(M.size(0), M.size(1), M.size(2))
-                        ], dim=1)
-            F = G.new_zeros(G.size(1), G.size(1)).unsqueeze(0)
-            F[:,   ncon:3*ncon, 3*ncon:4*ncon] = E
-            F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
-            F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
-            F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
-                                    torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
-            F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
-                                   -torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
-            h = torch.cat([v, 
-                           v.new_zeros(v.size(0), 3*ncon+2*nbody),
-                           (0.5 * world.mu_b() * torch.diag(world.M()).unsqueeze(0))
-                        ], dim=1)   # m in Eq.(2)
-
-            x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1).apply(M, u, G, h, Je, b, F)
+        # Solve Mixed LCP (Kline 2.7.2)
+        Jc = world.Jc()
+        ncon = Jc.size(0)   # number of contacts
+        v = torch.matmul(Jc, world.get_v()) * world.restitutions()
+        M = world.M().unsqueeze(0)
+        if neq > 0:
+            b = Je.new_zeros(Je.size(0)).unsqueeze(0)
+            Je = Je.unsqueeze(0)
         else:
-            # Solve Mixed LCP (Kline 2.7.2)
-            Jc = world.Jc()
-            ncon = Jc.size(0)   # number of contacts
-            v = torch.matmul(Jc, world.get_v()) * world.restitutions()
-            M = world.M().unsqueeze(0)
-            if neq > 0:
-                b = Je.new_zeros(Je.size(0)).unsqueeze(0)
-                Je = Je.unsqueeze(0)
-            else:
-                b = torch.tensor([])
-                Je = torch.tensor([])
-            Jc = Jc.unsqueeze(0)
-            u = u[:world.M().size(0)].unsqueeze(0)
-            v = v.unsqueeze(0)
-            E = world.E().unsqueeze(0)
-            mu_s = world.mu_s().unsqueeze(0)
-            Js = world.Js().unsqueeze(0)
-            Jb = world.Jb().unsqueeze(0)
-            # G = torch.cat([Jc, 
-            #                Js,
-            #                Js.new_zeros(Js.size(0), ncon, 3*nbody)
-            #             ], dim=1)
-            
-            G = torch.cat([Jc, 
-                           Js,
-                           Js.new_zeros(Js.size(0), mu_s.size(1), Js.size(2)),
-                           Jb,
-                           Jb.new_zeros(M.size(0), M.size(1), M.size(2))
-                        ], dim=1)
-            F = G.new_zeros(G.size(1), G.size(1)).unsqueeze(0)
-            F[:,   ncon:3*ncon, 3*ncon:4*ncon] = E
-            F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
-            F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
-            F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
-                                    1*torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
-            F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
-                                   -1*torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
-            h = torch.cat([v, 
-                           v.new_zeros(v.size(0), 3*ncon+2*nbody),
-                           (world.mu_b() * torch.diag(world.M()).unsqueeze(0))
-                        ], dim=1)   # m in Eq.(2)
+            b = torch.tensor([])
+            Je = torch.tensor([])
+        Jc = Jc.unsqueeze(0)
+        u = u[:world.M().size(0)].unsqueeze(0)
+        v = v.unsqueeze(0)
+        E = world.E().unsqueeze(0)
+        mu_s = world.mu_s().unsqueeze(0)
+        Js = world.Js().unsqueeze(0)
+        Jb = world.Jb().unsqueeze(0)
+        # G = torch.cat([Jc, 
+        #                Js,
+        #                Js.new_zeros(Js.size(0), ncon, 3*nbody)
+        #             ], dim=1)
+        
+        G = torch.cat([Jc, 
+                       Js,
+                       Js.new_zeros(Js.size(0), mu_s.size(1), Js.size(2)),
+                       Jb,
+                       Jb.new_zeros(M.size(0), M.size(1), M.size(2))
+                    ], dim=1)
+        F = G.new_zeros(G.size(1), G.size(1)).unsqueeze(0)
+        F[:,   ncon:3*ncon, 3*ncon:4*ncon] = E
+        F[:, 3*ncon:4*ncon,       :  ncon] = mu_s
+        F[:, 3*ncon:4*ncon,   ncon:3*ncon] = -E.transpose(1, 2)
+        F[:,         4*ncon:4*ncon+2*nbody, 4*ncon+3*nbody:4*ncon+5*nbody] = \
+                                torch.diag(G.new_ones(2*nbody)).unsqueeze(0)
+        F[:, 4*ncon+2*nbody:4*ncon+5*nbody,         4*ncon:4*ncon+3*nbody] = \
+                               -torch.diag(G.new_ones(3*nbody)).unsqueeze(0)
+        h = torch.cat([v, 
+                       v.new_zeros(v.size(0), 3*ncon+2*nbody),
+                       (0.5 * world.mu_b() * torch.diag(world.M()).unsqueeze(0))
+                    ], dim=1)   # m in Eq.(2)
 
-            x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)
+        x = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
+        
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
         return new_v
 
