@@ -28,6 +28,19 @@ to get a version that disables pivoting on the GPU.
         return x.lu()
 
 
+def lu_solve_hack(b, A_LU):
+    '''
+    function to replace btrisolve() from torch==1.0.0 in original version
+    Input:
+        b -- (∗,m)
+        A_LU -- (∗,m,m)
+    Output:
+        x -- (*,m)
+    '''
+    x = torch.lu_solve(b.unsqueeze(-1), *A_LU)
+    return x.squeeze(-1)
+
+
 INACC_ERR = """
 --------
 lcp warning: Returning an inaccurate and potentially incorrect solution.
@@ -265,8 +278,8 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
 
     H_LU = btrifact_hack(H_)
 
-    invH_A_ = A_.transpose(1, 2).lu_solve(*H_LU)  # H-1 AT
-    invH_g_ = g_.lu_solve(*H_LU)  # H-1 g
+    invH_A_ = torch.lu_solve(A_.transpose(1, 2), *H_LU)  # H-1 AT
+    invH_g_ = lu_solve_hack(g_, H_LU)  # H-1 g
 
     S_ = torch.bmm(A_, invH_A_)  # A H-1 AT
     # A H-1 AT + C_tilde
@@ -275,11 +288,11 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
     # [(H-1 g)T AT]T - h = A H-1 g - h
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
     # w = (A H-1 AT + C_tilde)-1 (A H-1 g - h) <= Av - eps I w = h
-    w_ = -t_.lu_solve(*S_LU)
+    w_ = lu_solve_hack(-t_, S_LU)
     # Shouldn't it be just g (no minus)?
     # (Doesn't seem to make a difference, though...)
     t_ = -g_ - w_.unsqueeze(1).bmm(A_).squeeze()  # -g - AT w
-    v_ = t_.lu_solve(*H_LU)  # v = H-1 (-g - AT w)
+    v_ = lu_solve_hack(t_, H_LU)  # v = H-1 (-g - AT w)
 
     dx = v_[:, :nz]
     ds = v_[:, nz:]
@@ -304,15 +317,15 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
 
     H_LU = btrifact_hack(H_)
 
-    invH_A_ = A_.transpose(1, 2).lu_solve(*H_LU)
-    invH_g_ = g_.lu_solve(*H_LU)
+    invH_A_ = torch.lu_solve(A_.transpose(1, 2), *H_LU)
+    invH_g_ = lu_solve_hack(g_, H_LU)
 
     S_ = torch.bmm(A_, invH_A_) + C_tilde
     S_LU = btrifact_hack(S_)
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
-    w_ = -t_.lu_solve(*S_LU)
+    w_ = lu_solve_hack(-t_, S_LU)
     t_ = -g_ - w_.unsqueeze(1).bmm(A_).squeeze()
-    v_ = t_.lu_solve(*H_LU)
+    v_ = lu_solve_hack(t_, H_LU)
 
     dx = v_[:, :nz]
     ds = v_[:, nz:]
@@ -330,7 +343,7 @@ def solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry):
 
     nineq, nz, neq, nBatch = get_sizes(G, A)
 
-    invQ_rx = rx.lu_solve(*Q_LU)  # Q-1 rx
+    invQ_rx = lu_solve_hack(rx, Q_LU)  # Q-1 rx
     if neq > 0:
         # A Q-1 rx - ry
         # G Q-1 rx + rs / d - rz
@@ -339,14 +352,14 @@ def solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry):
     else:
         h = invQ_rx.unsqueeze(1).bmm(G.transpose(1, 2)).squeeze(1) + rs / d - rz
 
-    w = -(h.lu_solve(*S_LU))  # S-1 h =
+    w = -lu_solve_hack(h, S_LU)  # S-1 h =
 
     g1 = -rx - w[:, neq:].unsqueeze(1).bmm(G).squeeze(1)  # -rx - GT w = -rx -GT S-1 h
     if neq > 0:
         g1 -= w[:, :neq].unsqueeze(1).bmm(A).squeeze(1)  # - AT w = -AT S-1 h
     g2 = -rs - w[:, neq:]
 
-    dx = g1.lu_solve(*Q_LU)  # Q-1 g1 = - Q-1 AT S-1 h
+    dx = lu_solve_hack(g1, Q_LU)  # Q-1 g1 = - Q-1 AT S-1 h
     ds = g2 / d  # g2 / d = (-rs - w) / d
     dz = w[:, neq:]
     dy = w[:, :neq] if neq > 0 else None
@@ -375,12 +388,12 @@ a non-zero diagonal.
     # See the 'Block LU factorization' part of our website
     # for more details.
 
-    G_invQ_GT = torch.bmm(G, G.transpose(1, 2).lu_solve(*Q_LU)) + F
+    G_invQ_GT = torch.bmm(G, torch.lu_solve(G.transpose(1, 2), *Q_LU)) + F
     R = G_invQ_GT.clone()
     S_LU_pivots = torch.IntTensor(range(1, 1 + neq + nineq)).unsqueeze(0) \
         .repeat(nBatch, 1).type_as(Q).int()
     if neq > 0:
-        invQ_AT = A.transpose(1, 2).lu_solve(*Q_LU)
+        invQ_AT = torch.lu_solve(A.transpose(1, 2), *Q_LU)
         A_invQ_AT = torch.bmm(A, invQ_AT)
         G_invQ_AT = torch.bmm(G, invQ_AT)
 
@@ -389,10 +402,9 @@ a non-zero diagonal.
         P_A_invQ_AT = P_A_invQ_AT.type_as(A_invQ_AT)
 
         S_LU_11 = LU_A_invQ_AT[0]
-        U_A_invQ_AT_inv = (P_A_invQ_AT.bmm(L_A_invQ_AT)
-                           ).lu_solve(*LU_A_invQ_AT)
+        U_A_invQ_AT_inv = lu_solve_hack(P_A_invQ_AT.bmm(L_A_invQ_AT), LU_A_invQ_AT)
         S_LU_21 = G_invQ_AT.bmm(U_A_invQ_AT_inv)
-        T = G_invQ_AT.transpose(1, 2).lu_solve(*LU_A_invQ_AT)
+        T = torch.lu_solve(G_invQ_AT.transpose(1, 2), *LU_A_invQ_AT)
         S_LU_12 = U_A_invQ_AT.bmm(T)
         S_LU_22 = Q.new_zeros(nBatch, nineq, nineq)
         S_LU_data = torch.cat((torch.cat((S_LU_11, S_LU_12), 2),
@@ -430,8 +442,8 @@ def factor_kkt(S_LU, R, d):
 
     T_LU = btrifact_hack(T)
 
-    global shown_btrifact_warning
-    if shown_btrifact_warning or not T.is_cuda:
+    global shown_lu_warning
+    if shown_lu_warning or not T.is_cuda:
         # TODO Don't use pivoting in most cases because
         # torch.btriunpack is inefficient here:
         oldPivotsPacked = S_LU[1][:, -nineq:] - neq
