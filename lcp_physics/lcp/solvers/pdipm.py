@@ -300,7 +300,7 @@ def factor_kkt(S_LU, R, d):
     if factor_kkt_eye is None or factor_kkt_eye.size() != d.size():
         # print('Updating batchedEye size.')
         factor_kkt_eye = torch.eye(nineq).repeat(
-            nBatch, 1, 1).type_as(R).byte()
+            nBatch, 1, 1).type_as(R).bool()
     # T = R.clone()
     # T[factor_kkt_eye] += (1. / d).view(-1)
     # more efficient version of these two lines in pytorch versions > 0.3.1
