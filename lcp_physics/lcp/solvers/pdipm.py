@@ -4,8 +4,6 @@
 import torch
 from enum import Enum
 
-from ..util import lu_unpack
-
 from lcp_physics.lcp.util import get_sizes, bdiag
 
 
@@ -72,7 +70,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     nineq, nz, neq, nBatch = get_sizes(G, A)
 
     # Find initial values
-    d = 0.99*Q.new_ones(nBatch, nineq)
+    d = Q.new_ones(nBatch, nineq)
     factor_kkt(S_LU, R, d)
     x, s, z, y = solve_kkt(
         Q_LU, d, G, A, S_LU,
@@ -402,7 +400,7 @@ a non-zero diagonal.
         G_invQ_AT = torch.bmm(G, invQ_AT)
 
         LU_A_invQ_AT = lu_hack(A_invQ_AT)
-        P_A_invQ_AT, L_A_invQ_AT, U_A_invQ_AT = lu_unpack(*LU_A_invQ_AT)
+        P_A_invQ_AT, L_A_invQ_AT, U_A_invQ_AT = torch.lu_unpack(*LU_A_invQ_AT)
         P_A_invQ_AT = P_A_invQ_AT.type_as(A_invQ_AT)
 
         S_LU_11 = LU_A_invQ_AT[0]
@@ -451,10 +449,10 @@ def factor_kkt(S_LU, R, d):
         # TODO Don't use pivoting in most cases because
         # torch.btriunpack is inefficient here:
         oldPivotsPacked = S_LU[1][:, -nineq:] - neq
-        oldPivots, _, _ = lu_unpack(
+        oldPivots, _, _ = torch.lu_unpack(
             T_LU[0], oldPivotsPacked, unpack_data=False)
         newPivotsPacked = T_LU[1]
-        newPivots, _, _ = lu_unpack(
+        newPivots, _, _ = torch.lu_unpack(
             T_LU[0], newPivotsPacked, unpack_data=False)
 
         # Re-pivot the S_LU_21 block.

@@ -34,7 +34,26 @@ class PdipmEngine(Engine):
         u = torch.matmul(world.M(), world.get_v()) + dt * f
         if neq > 0:
             u = torch.cat([u, u.new_zeros(neq)])
-            
+
+        extended = 0
+        if not extended and not world.contacts:
+            # No contact constraints, no complementarity conditions
+            if neq > 0:
+                P = torch.cat([torch.cat([world.M(), -Je.t()], dim=1),
+                               torch.cat([Je, Je.new_zeros(neq, neq)],
+                                         dim=1)])
+            else:
+                P = world.M()
+            if self.cached_inverse is None:
+                inv = torch.inverse(P)
+                if world.static_inverse:
+                    self.cached_inverse = inv
+            else:
+                inv = self.cached_inverse
+            x = torch.matmul(inv, u)  # Kline Eq. 2.41
+            new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
+            return new_v
+
         # Solve Mixed LCP (Kline 2.7.2)
         Jc = world.Jc()
         ncon = Jc.size(0)   # number of contacts
@@ -54,7 +73,6 @@ class PdipmEngine(Engine):
         Js = world.Js().unsqueeze(0)
         Jb = world.Jb().unsqueeze(0)
 
-        extended = 1
         if extended:
             G = torch.cat([Jc, 
                            Js,
@@ -74,7 +92,7 @@ class PdipmEngine(Engine):
                            v.new_zeros(v.size(0), 3*ncon+2*nbody),
                            (0.5 * world.mu_b() * torch.diag(world.M()).unsqueeze(0))
                         ], dim=1)   # m in Eq.(2)
-        else:    
+        else:
             G = torch.cat([Jc, 
                            Js,
                            Js.new_zeros(Js.size(0), ncon, 3*nbody)
@@ -84,11 +102,10 @@ class PdipmEngine(Engine):
             F[:, -mu_s.size(1):, :mu_s.size(2)] = mu_s
             F[:, -mu_s.size(1):, mu_s.size(2):mu_s.size(2) + E.size(1)] = \
                 -E.transpose(1, 2)
-            h = torch.cat([v, v.new_zeros(v.size(0), Jf.size(1) + mu_s.size(1))], 1)
+            h = torch.cat([v, v.new_zeros(v.size(0), Js.size(1) + mu_s.size(1))], 1)
         
 
-        x = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
-        
+        x = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)     
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
         return new_v
 
