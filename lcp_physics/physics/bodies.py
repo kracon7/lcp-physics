@@ -20,8 +20,8 @@ class Body(object):
     """Base class for bodies.
     """
     def __init__(self, pos, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff_s=Defaults.FRIC_COEFF_S, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         # get base tensor to define dtype, device and layout for others
         self._set_base_tensor(locals().values())
 
@@ -51,6 +51,7 @@ class Body(object):
         self.M[ang_sizes[0]:, ang_sizes[1]:] = torch.eye(DIM).type_as(self.M) * self.mass
 
         self.fric_coeff_s = get_tensor(fric_coeff_s, base_tensor=self._base_tensor)
+        self.fric_coeff_b = get_tensor(fric_coeff_b, base_tensor=self._base_tensor)
         self.restitution = get_tensor(restitution, base_tensor=self._base_tensor)
         self.forces = []
 
@@ -119,12 +120,13 @@ class Body(object):
 
 class Circle(Body):
     def __init__(self, pos, rad, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff_s=Defaults.FRIC_COEFF_S, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.rad = get_tensor(rad, base_tensor=self._base_tensor)
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff_s=fric_coeff_s, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b,
+                         eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
         return mass * self.rad * self.rad / 2
@@ -164,8 +166,8 @@ class Hull(Body):
        centroid's frame. Object position is set to centroid.
     """
     def __init__(self, ref_point, vertices, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff_s=Defaults.FRIC_COEFF_S, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         ref_point = get_tensor(ref_point, base_tensor=self._base_tensor)
         # center vertices around centroid
@@ -178,7 +180,8 @@ class Hull(Body):
         # store last separating edge for SAT
         self.last_sat_idx = 0
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff_s=fric_coeff_s, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s,  fric_coeff_b=fric_coeff_b,
+                         eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
         numerator = 0
@@ -256,8 +259,8 @@ class Hull(Body):
 
 class Rect(Hull):
     def __init__(self, pos, dims, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff_s=Defaults.FRIC_COEFF_S, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.dims = get_tensor(dims, base_tensor=self._base_tensor)
         pos = get_tensor(pos, base_tensor=self._base_tensor)
@@ -266,7 +269,8 @@ class Rect(Hull):
         verts = [v0, v1, -v0, -v1]
         ref_point = pos[-2:]
         super().__init__(ref_point, verts, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff_s=fric_coeff_s, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b,
+                          eps=eps, col=col, thickness=thickness)
         if pos.size(0) == 3:
             self.set_p(pos)
 
@@ -307,13 +311,15 @@ class Rect(Hull):
 
 class Composite():
     """rigid body based on particle formulation"""
-    def __init__(self, particle_pos, radius, mass=0.01, fric_coeff_s=0.15):
+    def __init__(self, particle_pos, radius, mass=0.01, 
+                fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B):
         '''
         Input:
             particle_pos -- ndarray (N, 2) 2D position of particles
             radius -- radius of each particle
             mass -- float or ndarray (N,), mass of each particle
-            fric_coeff_s -- friction coefficient
+            fric_coeff_s -- side friction coefficient
+            fric_coeff_b -- bottom friction coefficient
         '''
         # super(ClassName, self).__init__()
         # self.args = args
@@ -326,8 +332,10 @@ class Composite():
 
         for i in range(N-1):
             p1, p2 = particle_pos[i], particle_pos[i+1]
-            c1 = Circle(p1, radius, mass=mass[i])
-            c2 = Circle(p2, radius, mass=mass[i])
+            c1 = Circle(p1, radius, mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b)
+            c2 = Circle(p2, radius, mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b)
 
             if i == 0:
                 bodies.append(c1)
