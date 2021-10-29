@@ -4,7 +4,7 @@
 import torch
 from enum import Enum
 
-from ..util import efficient_btriunpack
+from ..util import lu_unpack
 
 from lcp_physics.lcp.util import get_sizes, bdiag
 
@@ -12,7 +12,7 @@ from lcp_physics.lcp.util import get_sizes, bdiag
 shown_lu_warning = False
 
 # @profile
-def btrifact_hack(x):
+def lu_hack(x):
     global shown_lu_warning
     try:
         return x.lu(pivot=not x.is_cuda)
@@ -57,22 +57,26 @@ https://github.com/locuslab/qpth/issues/6
 --------
 """
 
+class KKTSolvers(Enum):
+    LU_FULL = 1
+    LU_PARTIAL = 2
+    IR_UNOPT = 3
 
 # @profile
 def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
             eps=1e-12, verbose=-1, not_improved_lim=3,
-            max_iter=20):
+            max_iter=20, solver=KKTSolvers.LU_PARTIAL):
     """
     Q_LU, S_LU, R = pre_factor_kkt(Q, G, A)
     """
-    nineq, nz, neq, batch_size = get_sizes(G, A)
+    nineq, nz, neq, nBatch = get_sizes(G, A)
 
     # Find initial values
-    d = 0.99*Q.new_ones(batch_size, nineq)
+    d = 0.99*Q.new_ones(nBatch, nineq)
     factor_kkt(S_LU, R, d)
     x, s, z, y = solve_kkt(
         Q_LU, d, G, A, S_LU,
-        p, Q.new_zeros(batch_size, nineq),
+        p, Q.new_zeros(nBatch, nineq),
         -h, -b if neq > 0 else None)
 
     # Make all of the slack variables >= 1.
@@ -154,7 +158,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         # compute centering directions
         alpha = torch.min(torch.min(get_step(z, dz_aff),
                                     get_step(s, ds_aff)),
-                          torch.ones(batch_size).type_as(Q))
+                          torch.ones(nBatch).type_as(Q))
         alpha_nineq = alpha.repeat(nineq, 1).t()
         t1 = s + alpha_nineq * ds_aff
         t2 = z + alpha_nineq * dz_aff
@@ -162,10 +166,10 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         t4 = torch.sum(s * z, 1).squeeze()
         sig = (t3 / t4)**3
 
-        rx = Q.new_zeros(batch_size, nz)
+        rx = Q.new_zeros(nBatch, nz)
         rs = ((-mu * sig).repeat(nineq, 1).t() + ds_aff * dz_aff) / s
-        rz = Q.new_zeros(batch_size, nineq)
-        ry = Q.new_zeros(batch_size, neq)
+        rz = Q.new_zeros(nBatch, nineq)
+        ry = Q.new_zeros(nBatch, neq)
 
         dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
             Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
@@ -176,7 +180,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         dy = dy_aff + dy_cor if neq > 0 else None
         alpha = torch.min(0.999 * torch.min(get_step(z, dz),
                                             get_step(s, ds)),
-                          Q.new_ones(batch_size))
+                          Q.new_ones(nBatch))
         alpha_nineq = alpha.repeat(nineq, 1).t()
         alpha_neq = alpha.repeat(neq, 1).t() if neq > 0 else None
         alpha_nz = alpha.repeat(nz, 1).t()
@@ -276,7 +280,7 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
         g_ = torch.cat([rx, rs], 1)
         h_ = rz
 
-    H_LU = btrifact_hack(H_)
+    H_LU = lu_hack(H_)
 
     invH_A_ = torch.lu_solve(A_.transpose(1, 2), *H_LU)  # H-1 AT
     invH_g_ = lu_solve_hack(g_, H_LU)  # H-1 g
@@ -284,7 +288,7 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
     S_ = torch.bmm(A_, invH_A_)  # A H-1 AT
     # A H-1 AT + C_tilde
     S_ -= C_tilde
-    S_LU = btrifact_hack(S_)
+    S_LU = lu_hack(S_)
     # [(H-1 g)T AT]T - h = A H-1 g - h
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
     # w = (A H-1 AT + C_tilde)-1 (A H-1 g - h) <= Av - eps I w = h
@@ -315,13 +319,13 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
         g_ = torch.cat([rx, rs], 1)
         h_ = rz
 
-    H_LU = btrifact_hack(H_)
+    H_LU = lu_hack(H_)
 
     invH_A_ = torch.lu_solve(A_.transpose(1, 2), *H_LU)
     invH_g_ = lu_solve_hack(g_, H_LU)
 
     S_ = torch.bmm(A_, invH_A_) + C_tilde
-    S_LU = btrifact_hack(S_)
+    S_LU = lu_hack(S_)
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
     w_ = lu_solve_hack(-t_, S_LU)
     t_ = -g_ - w_.unsqueeze(1).bmm(A_).squeeze()
@@ -372,7 +376,7 @@ def pre_factor_kkt(Q, G, F, A):
     nineq, nz, neq, nBatch = get_sizes(G, A)
 
     try:
-        Q_LU = btrifact_hack(Q)
+        Q_LU = lu_hack(Q)
     except:
         raise RuntimeError("""
 lcp Error: Cannot perform LU factorization on Q.
@@ -397,8 +401,8 @@ a non-zero diagonal.
         A_invQ_AT = torch.bmm(A, invQ_AT)
         G_invQ_AT = torch.bmm(G, invQ_AT)
 
-        LU_A_invQ_AT = btrifact_hack(A_invQ_AT)
-        P_A_invQ_AT, L_A_invQ_AT, U_A_invQ_AT = efficient_btriunpack(*LU_A_invQ_AT)
+        LU_A_invQ_AT = lu_hack(A_invQ_AT)
+        P_A_invQ_AT, L_A_invQ_AT, U_A_invQ_AT = lu_unpack(*LU_A_invQ_AT)
         P_A_invQ_AT = P_A_invQ_AT.type_as(A_invQ_AT)
 
         S_LU_11 = LU_A_invQ_AT[0]
@@ -440,17 +444,17 @@ def factor_kkt(S_LU, R, d):
     T.masked_scatter_(factor_kkt_eye, (1. / d).view(-1))
     T += R.clone()
 
-    T_LU = btrifact_hack(T)
+    T_LU = lu_hack(T)
 
     global shown_lu_warning
     if shown_lu_warning or not T.is_cuda:
         # TODO Don't use pivoting in most cases because
         # torch.btriunpack is inefficient here:
         oldPivotsPacked = S_LU[1][:, -nineq:] - neq
-        oldPivots, _, _ = efficient_btriunpack(
+        oldPivots, _, _ = lu_unpack(
             T_LU[0], oldPivotsPacked, unpack_data=False)
         newPivotsPacked = T_LU[1]
-        newPivots, _, _ = efficient_btriunpack(
+        newPivots, _, _ = lu_unpack(
             T_LU[0], newPivotsPacked, unpack_data=False)
 
         # Re-pivot the S_LU_21 block.
