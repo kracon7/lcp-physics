@@ -41,7 +41,7 @@ def get_sizes(G, A=None):
 def bdiag(d):
     nBatch, sz = d.size()
     D = torch.zeros(nBatch, sz, sz).type_as(d)
-    I = torch.eye(sz).repeat(nBatch, 1, 1).type_as(d).byte()
+    I = torch.eye(sz).repeat(nBatch, 1, 1).type_as(d).bool()
     D[I] = d.squeeze()
     return D
 

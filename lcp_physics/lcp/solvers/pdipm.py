@@ -68,7 +68,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     nineq, nz, neq, batch_size = get_sizes(G, A)
 
     # Find initial values
-    d = Q.new_ones(batch_size, nineq)
+    d = 0.99*Q.new_ones(batch_size, nineq)
     factor_kkt(S_LU, R, d)
     x, s, z, y = solve_kkt(
         Q_LU, d, G, A, S_LU,
@@ -432,7 +432,7 @@ def factor_kkt(S_LU, R, d):
     if factor_kkt_eye is None or factor_kkt_eye.size() != d.size():
         # print('Updating batchedEye size.')
         factor_kkt_eye = torch.eye(nineq).repeat(
-            nBatch, 1, 1).type_as(R).byte()
+            nBatch, 1, 1).type_as(R).bool()
     # T = R.clone()
     # T[factor_kkt_eye] += (1. / d).view(-1)
     # more efficient version of these two lines in pytorch versions > 0.3.1

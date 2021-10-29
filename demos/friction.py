@@ -17,7 +17,7 @@ from lcp_physics.physics.utils import Defaults, Recorder
 from lcp_physics.physics.world import World, run_world
 
 
-TIME = 10
+TIME = 5
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
@@ -51,7 +51,7 @@ def make_world(radius):
     
 
 def fixed_joint_demo(screen):
-    run_time=10
+    run_time = TIME
     radius = 30
     world = make_world(radius)
     recorder = None
@@ -118,16 +118,26 @@ def fixed_joint_demo(screen):
         print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
                                                1 / animation_dt), end='')
 
-    fig, ax = plt.subplots(6,1)
+    fig, ax = plt.subplots(2,1)
     f_log = np.stack(f_log)
     v_log = np.stack(v_log)
 
-    ax[0].plot(f_log[:, 0])
-    ax[1].plot(v_log[:, 0])
-    ax[2].plot(f_log[:, 1])
-    ax[3].plot(v_log[:, 1])
-    ax[4].plot(f_log[:, 2])
-    ax[5].plot(v_log[:, 2])
+    ax[0].plot(f_log[:, 1])
+    ax[1].plot(v_log[:, 1])
+    ax[1].set_xlabel('time steps')
+    ax[0].set_ylabel('external force')
+    ax[1].set_ylabel('velocity')
+
+    # fig, ax = plt.subplots(6,1)
+    # f_log = np.stack(f_log)
+    # v_log = np.stack(v_log)
+
+    # ax[0].plot(f_log[:, 0])
+    # ax[1].plot(v_log[:, 0])
+    # ax[2].plot(f_log[:, 1])
+    # ax[3].plot(v_log[:, 1])
+    # ax[4].plot(f_log[:, 2])
+    # ax[5].plot(v_log[:, 2])
 
     plt.show()
 

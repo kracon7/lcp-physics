@@ -5,7 +5,7 @@ from .solvers import pdipm
 from .util import bger, extract_batch_size
 
 class LCPOptions():
-    def __init__(self, eps=1e-12, verbose=-1, not_improved_lim=3,
+    def __init__(self, eps=1e-12, verbose=1, not_improved_lim=3,
                  max_iter=10):
         self.eps = eps
         self.verbose = verbose
