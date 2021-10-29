@@ -7,11 +7,12 @@ from .util import bger, extract_batch_size
 
 class LCPOptions():
     def __init__(self, eps=1e-12, verbose=-1, not_improved_lim=3,
-                 max_iter=10):
+                 max_iter=10, extend=0):
         self.eps = eps
         self.verbose = verbose
         self.not_improved_lim = not_improved_lim
         self.max_iter = max_iter
+        self.extend = extend
 
 class LCPFunction(Function):
     # """A differentiable LCP solver, uses the primal dual interior point method
