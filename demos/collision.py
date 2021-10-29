@@ -26,16 +26,16 @@ def make_world(radius):
     '''
     bodies = []
     joints = []
-    fric_coeff = 0.1
+    fric_coeff_s = 0.1
 
     pos = [500, 300]
-    c1 = Circle(pos, radius, mu_s=fric_coeff)
+    c1 = Circle(pos, radius, mu_s=fric_coeff_s)
     bodies.append(c1)
 
-    c2 = Circle([pos[0]+2*radius, pos[1]+5], radius, mu_s=fric_coeff)
+    c2 = Circle([pos[0]+2*radius, pos[1]+5], radius, mu_s=fric_coeff_s)
     bodies.append(c2)
 
-    # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff=fric_coeff)
+    # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff_s=fric_coeff_s)
     # bodies.append(c3)
 
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)

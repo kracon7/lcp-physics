@@ -95,16 +95,16 @@ def slide_demo(screen):
     joints = []
     # restitution = Defaults.RESTITUTION
     restitution = 0
-    fric_coeff = 0.15
+    fric_coeff_s = 0.15
 
     inclination = math.pi / 32
     r = Rect([inclination, 500, 300], [900, 10],
-             restitution=restitution, fric_coeff=fric_coeff)
+             restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(r)
     joints.append(TotalConstraint(r))
 
     r = Rect([100, 100], [60, 60],
-             restitution=restitution, fric_coeff=fric_coeff)
+             restitution=restitution, fric_coeff_s=fric_coeff_s)
     # r = Hull([100, 100], [[30, 30], [-30, 30], [-30, -30], [30, -30]])
     bodies.append(r)
     r.add_force(Gravity(g=100))
@@ -117,7 +117,7 @@ def slide_demo(screen):
 
 def fric_demo(screen):
     restitution = 0.1
-    fric_coeff = 1
+    fric_coeff_s = 1
 
     bodies = []
     joints = []
@@ -128,20 +128,20 @@ def fric_demo(screen):
         else:
             return ExternalForce.ZEROS
 
-    r = Rect([400, 400], [900, 10], restitution=restitution, fric_coeff=fric_coeff)
+    r = Rect([400, 400], [900, 10], restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(r)
     r.add_force(ExternalForce(timed_force, multiplier=100))
     r.add_force(Gravity(g=100))
 
-    c = Circle([200, 364], 30, restitution=restitution, fric_coeff=fric_coeff)
+    c = Circle([200, 364], 30, restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(c)
     c.add_force(Gravity(g=100))
 
-    c = Circle([50, 436], 30, restitution=restitution, fric_coeff=fric_coeff)
+    c = Circle([50, 436], 30, restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(c)
     joints.append(XConstraint(c))
     joints.append(YConstraint(c))
-    c = Circle([800, 436], 30, restitution=restitution, fric_coeff=fric_coeff)
+    c = Circle([800, 436], 30, restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(c)
     joints.append(XConstraint(c))
     joints.append(YConstraint(c))

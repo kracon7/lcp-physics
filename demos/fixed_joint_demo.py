@@ -18,14 +18,14 @@ def fixed_joint_demo(screen):
     bodies = []
     joints = []
     restitution = 0.5
-    fric_coeff = 0.15
+    fric_coeff_s = 0.15
 
     r = Rect([120, 100], [60, 60],
-             restitution=restitution, fric_coeff=fric_coeff)
+             restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(r)
     r.add_force(Gravity(g=100))
     r2 = Rect([160, 100], [60, 60],
-              restitution=restitution, fric_coeff=fric_coeff)
+              restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(r2)
     joints += [FixedJoint(r, r2)]
     r2.add_no_contact(r)
@@ -33,7 +33,7 @@ def fixed_joint_demo(screen):
 
     inclination = math.pi / 32
     r = Rect([inclination, 500, 500], [900, 10],
-             restitution=restitution, fric_coeff=fric_coeff)
+             restitution=restitution, fric_coeff_s=fric_coeff_s)
     bodies.append(r)
     joints.append(TotalConstraint(r))
 

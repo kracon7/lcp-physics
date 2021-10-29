@@ -21,7 +21,8 @@ class Defaults:
     # Default simulation parameters
     RESTITUTION = 0
 
-    FRIC_COEFF = 0.1
+    FRIC_COEFF_S = 0.1
+    FRIC_COEFF_B = [0.1, 0.01]
     FRIC_DIRS = 2
 
     FPS = 30

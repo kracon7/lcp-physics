@@ -219,8 +219,7 @@ class World:
         for i, contacts in enumerate(self.contacts):
             i1 = contacts[1]
             i2 = contacts[2]
-            # mu[i] = torch.sqrt(self.bodies[i1].fric_coeff * self.bodies[i2].fric_coeff)
-            mu[i] = 0.5 * (self.bodies[i1].fric_coeff + self.bodies[i2].fric_coeff)
+            mu[i] = 0.5 * (self.bodies[i1].fric_coeff_s + self.bodies[i2].fric_coeff_s)
         return torch.diag(mu)
 
     def E(self):

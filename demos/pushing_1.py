@@ -21,7 +21,7 @@ def make_world(particles, hand):
     '''
     bodies = []
     joints = []
-    fric_coeff = 0.15
+    fric_coeff_s = 0.15
 
     N = len(particles)
     for i in range(N-1):

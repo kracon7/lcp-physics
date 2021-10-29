@@ -26,7 +26,7 @@ def make_world(particle_pos, particle_radius, hand):
     '''
     bodies = []
     joints = []
-    fric_coeff = 0.15
+    fric_coeff_s = 0.15
 
     composite_body = Composite(particle_pos, particle_radius)
     bodies += composite_body.bodies

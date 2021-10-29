@@ -26,8 +26,8 @@ def grad_demo(screen):
     # learned_force = gravity
     world, c, target = make_world(learned_force)
     # initial_state = world.save_state()
-    # next_fric_coeff = Variable(torch.FloatTensor([1e-7]), requires_grad=True)
-    # c.fric_coeff = next_fric_coeff
+    # next_fric_coeff_s = Variable(torch.FloatTensor([1e-7]), requires_grad=True)
+    # c.fric_coeff_s = next_fric_coeff_s
     # initial_state = world.save_state()
     rec = None
     # rec = Recorder(DT, screen)
@@ -45,7 +45,7 @@ def grad_demo(screen):
         # world.load_state(initial_state)
         # world.reset_engine()
         # c = world.bodies[0]
-        # c.fric_coeff = next_fric_coeff
+        # c.fric_coeff_s = next_fric_coeff_s
         run_world(world, run_time=TIME, screen=None)
 
         dist = (target.pos - c.pos).norm()
@@ -54,15 +54,15 @@ def grad_demo(screen):
         # grad.clamp_(-10, 10)
         initial_force = Variable(initial_force.data - learning_rate * grad, requires_grad=True)
         print('\n initial force: ', initial_force.detach().cpu().numpy().tolist())
-        # grad = c.fric_coeff.grad.data
+        # grad = c.fric_coeff_s.grad.data
         # grad.clamp_(-10, 10)
-        # temp = c.fric_coeff.data - learning_rate * grad
+        # temp = c.fric_coeff_s.data - learning_rate * grad
         # temp.clamp_(1e-7, 1)
         learning_rate *= 0.9
-        # next_fric_coeff = Variable(temp, requires_grad=True)
+        # next_fric_coeff_s = Variable(temp, requires_grad=True)
         print(i, '/', max_iter, dist.data.item())
         print(grad)
-        # print(next_fric_coeff)
+        # print(next_fric_coeff_s)
         print(learned_force(0.05))
         print('=======')
         if abs((last_dist - dist).data.item()) < 1e-5:
@@ -71,7 +71,7 @@ def grad_demo(screen):
         dist_hist.append(dist)
 
     world = make_world(learned_force)[0]
-    # c.fric_coeff = next_fric_coeff
+    # c.fric_coeff_s = next_fric_coeff_s
     # world.load_state(initial_state)
     # world.reset_engine()
     rec = None
