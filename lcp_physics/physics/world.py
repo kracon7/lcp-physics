@@ -183,8 +183,8 @@ class World:
             Jc[i, i2 * self.vec_len:(i2 + 1) * self.vec_len] = J2
         return Jc
 
-    def Jf(self):
-        Jf = self._M.new_zeros(len(self.contacts) * self.fric_dirs,
+    def Js(self):
+        Js = self._M.new_zeros(len(self.contacts) * self.fric_dirs,
                                self.vec_len * len(self.bodies))
         for i, contact in enumerate(self.contacts):
             c = contact[0]  # c = (normal, contact_pt_1, contact_pt_2)
@@ -204,23 +204,54 @@ class World:
                 torch.cat([cross_2d(c[2], dir2).reshape(1, 1),
                            dir2.unsqueeze(0)], dim=1),
             ], dim=0)
-            Jf[i * self.fric_dirs:(i + 1) * self.fric_dirs,
+            Js[i * self.fric_dirs:(i + 1) * self.fric_dirs,
             i1 * self.vec_len:(i1 + 1) * self.vec_len] = J1
-            Jf[i * self.fric_dirs:(i + 1) * self.fric_dirs,
+            Js[i * self.fric_dirs:(i + 1) * self.fric_dirs,
             i2 * self.vec_len:(i2 + 1) * self.vec_len] = -J2
-        return Jf
+        return Js
 
-    def mu(self):
-        return self._memoized_mu(*[(c[1], c[2]) for c in self.contacts])
+    def Jb(self):
+        '''
+        Jacobian matrix for bottom friction
+        '''
+        Jb = self._M.new_zeros(2*len(self.bodies), 3*len(self.bodies))
+        v = self.get_v()
 
-    def _memoized_mu(self, *contacts):
+        for i, b in enumerate(self.bodies):
+            vi = v[i*3 : (i+1)*3]
+            if torch.norm(vi[1:]) == 0:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        self._M.new_zeros(3)
+                     ])
+            else:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        torch.cat([self._M.new_zeros(1), -vi[1:] / torch.norm(vi[1:])])
+                     ])
+            Jb[2*i:2*(i+1), 3*i:3*(i+1)] = Ji
+        return Jb
+
+
+    def mu_s(self):
+        return self._memoized_mu_s(*[(c[1], c[2]) for c in self.contacts])
+
+    def _memoized_mu_s(self, *contacts):
         # contacts is argument so that cacheing can be implemented at some point
-        mu = self._M.new_zeros(len(self.contacts))
+        mu_s = self._M.new_zeros(len(self.contacts))
         for i, contacts in enumerate(self.contacts):
             i1 = contacts[1]
             i2 = contacts[2]
-            mu[i] = 0.5 * (self.bodies[i1].fric_coeff_s + self.bodies[i2].fric_coeff_s)
-        return torch.diag(mu)
+            mu_s[i] = 0.5 * (self.bodies[i1].fric_coeff_s + self.bodies[i2].fric_coeff_s)
+        return torch.diag(mu_s)
+
+    def mu_b(self):
+        mu_b = self._M.new_zeros(3*len(self.bodies))
+        for i, b in enumerate(self.bodies):
+            mu_b[3*i:3*(i+1)] = torch.stack([b.fric_coeff_b[1], 
+                                             b.fric_coeff_b[0], 
+                                             b.fric_coeff_b[0]])
+        return mu_b
 
     def E(self):
         return self._memoized_E(len(self.contacts))

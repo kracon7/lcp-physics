@@ -9,7 +9,7 @@ from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor
 from lcp_physics.physics.utils import Defaults, Recorder
 from lcp_physics.physics.world import World, run_world
 
-TIME = 20
+TIME = 6
 DT = Defaults.DT
 
 
