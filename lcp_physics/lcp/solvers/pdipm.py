@@ -60,23 +60,38 @@ https://github.com/locuslab/qpth/issues/6
 --------
 """
 
+class KKTSolvers(Enum):
+    LU_FULL = 1
+    LU_PARTIAL = 2
+    IR_UNOPT = 3
+
 
 # @profile
 def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
             eps=1e-12, verbose=-1, not_improved_lim=3,
-            max_iter=20):
+            max_iter=20, solver=KKTSolvers.LU_PARTIAL):
     """
     Q_LU, S_LU, R = pre_factor_kkt(Q, G, A)
     """
     nineq, nz, neq, nBatch = get_sizes(G, A)
+    ns = (nineq, nz, neq, nBatch)
 
     # Find initial values
-    d = Q.new_ones(nBatch, nineq)
-    factor_kkt(S_LU, R, d)
-    x, s, z, y = solve_kkt(
-        Q_LU, d, G, A, S_LU,
-        p, Q.new_zeros(nBatch, nineq),
-        -h, -b if neq > 0 else None)
+    if solver == KKTSolvers.LU_FULL:
+        D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+        x, s, z, y = factor_solve_kkt_full(
+            Q, D, G, A, F, 
+            p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if b is not None else None,
+            ns)
+    elif solver == KKTSolvers.LU_PARTIAL:
+        d = Q.new_ones(nBatch, nineq)
+        factor_kkt(S_LU, R, d)
+        x, s, z, y = solve_kkt(
+            Q_LU, d, G, A, S_LU,
+            p, Q.new_zeros(nBatch, nineq),
+            -h, -b if neq > 0 else None)
+    else:
+        assert False
 
     # Make all of the slack variables >= 1.
     M = torch.min(s, 1)[0]
@@ -337,7 +352,7 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
 
     return dx, ds, dz, dy
 
-def factor_solve_kkt_full(Q, D, G, F, rx, rs, rz, ry, ns):
+def factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry, ns):
     nineq, nz, neq, nBatch = ns
     H_ = torch.zeros(nBatch, nz + nineq, nz + nineq).type_as(Q)
     H_[:, :nz, :nz] = Q
