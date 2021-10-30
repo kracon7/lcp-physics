@@ -68,14 +68,14 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     """
     Q_LU, S_LU, R = pre_factor_kkt(Q, G, A)
     """
-    nineq, nz, neq, batch_size = get_sizes(G, A)
+    nineq, nz, neq, nBatch = get_sizes(G, A)
 
     # Find initial values
-    d = Q.new_ones(batch_size, nineq)
+    d = Q.new_ones(nBatch, nineq)
     factor_kkt(S_LU, R, d)
     x, s, z, y = solve_kkt(
         Q_LU, d, G, A, S_LU,
-        p, Q.new_zeros(batch_size, nineq),
+        p, Q.new_zeros(nBatch, nineq),
         -h, -b if neq > 0 else None)
 
     # Make all of the slack variables >= 1.
@@ -157,7 +157,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         # compute centering directions
         alpha = torch.min(torch.min(get_step(z, dz_aff),
                                     get_step(s, ds_aff)),
-                          torch.ones(batch_size).type_as(Q))
+                          torch.ones(nBatch).type_as(Q))
         alpha_nineq = alpha.repeat(nineq, 1).t()
         t1 = s + alpha_nineq * ds_aff
         t2 = z + alpha_nineq * dz_aff
@@ -165,10 +165,10 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         t4 = torch.sum(s * z, 1).squeeze()
         sig = (t3 / t4)**3
 
-        rx = Q.new_zeros(batch_size, nz)
+        rx = Q.new_zeros(nBatch, nz)
         rs = ((-mu * sig).repeat(nineq, 1).t() + ds_aff * dz_aff) / s
-        rz = Q.new_zeros(batch_size, nineq)
-        ry = Q.new_zeros(batch_size, neq)
+        rz = Q.new_zeros(nBatch, nineq)
+        ry = Q.new_zeros(nBatch, neq)
 
         dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
             Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
@@ -179,7 +179,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         dy = dy_aff + dy_cor if neq > 0 else None
         alpha = torch.min(0.999 * torch.min(get_step(z, dz),
                                             get_step(s, ds)),
-                          Q.new_ones(batch_size))
+                          Q.new_ones(nBatch))
         alpha_nineq = alpha.repeat(nineq, 1).t()
         alpha_neq = alpha.repeat(neq, 1).t() if neq > 0 else None
         alpha_nz = alpha.repeat(nz, 1).t()
