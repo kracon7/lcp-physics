@@ -337,6 +337,42 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
 
     return dx, ds, dz, dy
 
+def factor_solve_kkt_full(Q, D, G, F, rx, rs, rz, ry, ns):
+    nineq, nz, neq, nBatch = ns
+    H_ = torch.zeros(nBatch, nz + nineq, nz + nineq).type_as(Q)
+    H_[:, :nz, :nz] = Q
+    H_[:, -nineq:, -nineq:] = D
+    C_ = torch.zeros(nBatch, nineq + neq, nineq + neq).type_as(Q)
+    C_[:, :nineq, :nineq] = -F
+    if neq > 0:
+        A_ = torch.cat([torch.cat([G, torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)], 2),
+                        torch.cat([A, torch.zeros(nBatch, neq, nineq).type_as(Q)], 2)
+                    ], 1)
+        g_ = torch.cat([rx, rs], 1)
+        h_ = torch.cat([rz, ry], 1)
+    else:
+        A_ = torch.cat([G, torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)], 2)
+        g_ = torch.cat([rx, rs], 1)
+        h_ = rz
+
+    H_LU = btrifact_hack(H_)
+
+    invH_A_ = A_.transpose(1,2).lu_solve(*H_LU)
+    invH_g_ = g_.unsqueeze(2).lu_solve(*H_LU).squeeze(2)
+
+    S_ = torch.bmm(A_, invH_A_) - C_
+    S_LU = btrifact_hack(S_)
+    t_ = torch.bmm(A_, invH_g_.unsqueeze(2)).squeeze(2) -h_
+    w_ = t_.unsqueeze(2).lu_solve(*S_LU).squeeze(2)
+    t_ = g_ - torch.bmm(A_.transpose(1,2), w_.unsqueeze(2)).squeeze(2)
+    v_ = t_.unsqueeze(2).lu_solve(*H_LU).squeeze(2)
+
+    dx = v_[:, :nz]
+    ds = v_[:, nz:]
+    dz = w_[:, :nineq]
+    dy = w_[:, nineq:] if neq>0 else None
+
+    return dx, ds, dz, dy
 
 
 def solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry):
