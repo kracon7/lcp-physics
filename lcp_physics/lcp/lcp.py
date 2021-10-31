@@ -2,17 +2,19 @@ import torch
 from torch.autograd import Function
 
 from .solvers import pdipm
+from .solvers.pdipm import KKTSolvers
 from .util import bger, extract_batch_size
 
 
 class LCPOptions():
     def __init__(self, eps=1e-12, verbose=-1, not_improved_lim=3,
-                 max_iter=10, extend=0):
+                 max_iter=10, extend=0, solver_type=1):
         self.eps = eps
         self.verbose = verbose
         self.not_improved_lim = not_improved_lim
         self.max_iter = max_iter
         self.extend = extend
+        self.solver = KKTSolvers(solver_type)
 
 class LCPFunction(Function):
     # """A differentiable LCP solver, uses the primal dual interior point method
@@ -38,7 +40,7 @@ class LCPFunction(Function):
         zhats, ctx.nus, ctx.lams, ctx.slacks = pdipm.forward(
             Q, p, G, h, A, b, F, ctx.Q_LU, ctx.S_LU, ctx.R,
             eps=lcp_options.eps, max_iter=lcp_options.max_iter, verbose=lcp_options.verbose,
-            not_improved_lim=lcp_options.not_improved_lim)
+            not_improved_lim=lcp_options.not_improved_lim, solver=lcp_options.solver)
 
         ctx.save_for_backward(zhats, Q, p, G, h, A, b, F)
         return zhats

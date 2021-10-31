@@ -20,11 +20,11 @@ class World:
                  contact_callback=Defaults.CONTACT, eps=Defaults.EPSILON,
                  tol=Defaults.TOL, fric_dirs=Defaults.FRIC_DIRS,
                  post_stab=Defaults.POST_STABILIZATION, strict_no_penetration=True,
-                 max_iter=10, verbose=1, extend=0):
+                 max_iter=10, verbose=1, extend=0, solver_type=1):
         # self.contacts_debug = None  # XXX
 
         # Load classes from string name defined in utils
-        self.engine = PdipmEngine(max_iter, verbose, extend)
+        self.engine = PdipmEngine(max_iter, verbose, extend, solver_type)
         self.contact_callback = get_instance(contacts_module, contact_callback)
 
         self.t = 0

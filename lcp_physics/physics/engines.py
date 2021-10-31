@@ -11,8 +11,11 @@ from lcp_physics.lcp.lcp import LCPFunction, LCPOptions
 class PdipmEngine():
     """Engine that uses the primal dual interior point method LCP solver.
     """
-    def __init__(self, max_iter, verbose, extend):
-        self.lcp_options = LCPOptions(max_iter=max_iter, verbose=verbose, extend=extend)
+    def __init__(self, max_iter, verbose, extend, solver_type):
+        self.lcp_options = LCPOptions(max_iter=max_iter, 
+                                      verbose=verbose, 
+                                      extend=extend, 
+                                      solver_type=solver_type)
         self.lcp_solver = LCPFunction
         self.cached_inverse = None
         self.max_iter = max_iter

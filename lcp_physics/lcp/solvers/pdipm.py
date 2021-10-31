@@ -61,8 +61,8 @@ https://github.com/locuslab/qpth/issues/6
 """
 
 class KKTSolvers(Enum):
-    LU_FULL = 1
-    LU_PARTIAL = 2
+    LU_PARTIAL = 1
+    LU_FULL = 2
     IR_UNOPT = 3
 
 
@@ -166,8 +166,15 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
                 print(INACC_ERR)
             return best['x'], best['y'], best['z'], best['s']
 
-        dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(
-            Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        if solver == KKTSolvers.LU_FULL:
+            D = bdiag(d)
+            dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(
+                Q, D, G, A, F, rx, rs, rz, ry, ns)
+        elif solver == KKTSolvers.LU_PARTIAL:
+            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(
+                Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        else:
+            assert False
 
         # compute centering directions
         alpha = torch.min(torch.min(get_step(z, dz_aff),
@@ -185,8 +192,15 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         rz = Q.new_zeros(nBatch, nineq)
         ry = Q.new_zeros(nBatch, neq)
 
-        dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
-            Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        if solver == KKTSolvers.LU_FULL:
+            D = bdiag(d)
+            dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(
+                Q, D, G, A, F, rx, rs, rz, ry, ns)
+        elif solver == KKTSolvers.LU_PARTIAL:
+            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
+                Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        else:
+            assert False
 
         dx = dx_aff + dx_cor
         ds = ds_aff + ds_cor
