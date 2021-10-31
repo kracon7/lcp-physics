@@ -129,7 +129,7 @@ class Circle(Body):
                          eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
-        return mass * self.rad * self.rad / 2
+        return mass * 3.1416 / 2 # * self.rad * self.rad
 
     def _create_geom(self):
         self.geom = ode.GeomSphere(None, self.rad.item() + self.eps.item())
@@ -193,7 +193,7 @@ class Hull(Body):
             numerator = numerator + norm_cross * \
                 (torch.dot(v1, v1) + torch.dot(v1, v2) + torch.dot(v2, v2))
             denominator = denominator + norm_cross
-        return 1 / 6 * mass * numerator / denominator
+        return 1 / 6 * mass# * numerator / denominator
 
     def _create_geom(self):
         # find vertex furthest from centroid
@@ -275,7 +275,7 @@ class Rect(Hull):
             self.set_p(pos)
 
     def _get_ang_inertia(self, mass):
-        return mass * torch.sum(self.dims ** 2) / 12
+        return mass * torch.sum(self.dims ** 2) / 12 / (self.dims[0] * self.dims[1])
 
     def _create_geom(self):
         self.geom = ode.GeomBox(None, torch.cat([self.dims + 2 * self.eps.item(),
