@@ -81,7 +81,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
         x, s, z, y = factor_solve_kkt_full(
             Q, D, G, A, F, 
-            p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if b is not None else None,
+            p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None,
             ns)
     elif solver == KKTSolvers.LU_PARTIAL:
         d = Q.new_ones(nBatch, nineq)

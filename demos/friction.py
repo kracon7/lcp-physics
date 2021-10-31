@@ -17,7 +17,7 @@ from lcp_physics.physics.utils import Defaults, Recorder
 from lcp_physics.physics.world import World, run_world
 
 
-TIME = 5
+TIME = 0.2
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
@@ -46,7 +46,7 @@ def make_world(radius):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1)
+    world = World(bodies, joints, dt=DT, extend=1, solver_type=2)
     return world
     
 
