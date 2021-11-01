@@ -312,8 +312,8 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
 
     H_LU = btrifact_hack(H_)
 
-    invH_A_ = A_.transpose(1, 2).btrisolve(*H_LU)  # H-1 AT
-    invH_g_ = g_.btrisolve(*H_LU)  # H-1 g
+    invH_A_ = lu_solve_hack(A_.transpose(1, 2), H_LU)  # H-1 AT
+    invH_g_ = lu_solve_hack(g_, H_LU)  # H-1 g
 
     S_ = torch.bmm(A_, invH_A_)  # A H-1 AT
     # A H-1 AT + C_tilde
@@ -322,11 +322,11 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
     # [(H-1 g)T AT]T - h = A H-1 g - h
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
     # w = (A H-1 AT + C_tilde)-1 (A H-1 g - h) <= Av - eps I w = h
-    w_ = -t_.btrisolve(*S_LU)
+    w_ = lu_solve_hack(-t_, S_LU)
     # Shouldn't it be just g (no minus)?
     # (Doesn't seem to make a difference, though...)
     t_ = -g_ - w_.unsqueeze(1).bmm(A_).squeeze()  # -g - AT w
-    v_ = t_.btrisolve(*H_LU)  # v = H-1 (-g - AT w)
+    v_ = lu_solve_hack(t_, H_LU)  # v = H-1 (-g - AT w)
 
     dx = v_[:, :nz]
     ds = v_[:, nz:]
@@ -351,15 +351,15 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
 
     H_LU = btrifact_hack(H_)
 
-    invH_A_ = A_.transpose(1, 2).btrisolve(*H_LU)
-    invH_g_ = g_.btrisolve(*H_LU)
+    invH_A_ = lu_solve_hack(A_.transpose(1, 2), H_LU)
+    invH_g_ = lu_solve_hack(g_, H_LU)
 
     S_ = torch.bmm(A_, invH_A_) + C_tilde
     S_LU = btrifact_hack(S_)
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
-    w_ = -t_.btrisolve(*S_LU)
+    w_ = lu_solve_hack(-t_, S_LU)
     t_ = -g_ - w_.unsqueeze(1).bmm(A_).squeeze()
-    v_ = t_.btrisolve(*H_LU)
+    v_ = lu_solve_hack(t_, H_LU)
 
     dx = v_[:, :nz]
     ds = v_[:, nz:]
@@ -368,8 +368,9 @@ def factor_solve_kkt(Q_tilde, D_tilde, A_, C_tilde, rx, rs, rz, ry, ns):
 
     return dx, ds, dz, dy
 
-def factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry, ns):
-    nineq, nz, neq, nBatch = ns
+def factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry):
+    nineq, nz, neq, nBatch = get_sizes(G, A)
+
     H_ = torch.zeros(nBatch, nz + nineq, nz + nineq).type_as(Q)
     H_[:, :nz, :nz] = Q
     H_[:, -nineq:, -nineq:] = D
