@@ -64,6 +64,7 @@ class KKTSolvers(Enum):
     LU_PARTIAL = 1
     LU_FULL = 2
     IR_UNOPT = 3
+    VANILLA = 4
 
 
 # @profile
@@ -81,7 +82,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         d = Q.new_ones(nBatch, nineq)
         factor_kkt(S_LU, R, d)
         x, s, z, y = solve_kkt(Q_LU, d, G, A, S_LU,
-                    p, Q.new_zeros(nBatch, nineq), -h, -b if neq > 0 else None)
+                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
     elif solver == KKTSolvers.LU_FULL:
         D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
         x, s, z, y = factor_solve_kkt_full(Q, D, G, A, F, 
@@ -89,7 +90,11 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     elif solver == KKTSolvers.IR_UNOPT:
         D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
         x, s, z, y = solve_kkt_ir(Q, D, G, A, F,
-                    -p, torch.zeros(nBatch, nineq).type_as(Q), h, b if neq > 0 else None)
+                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
+    elif solver == KKTSolvers.VANILLA:
+        D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+        x, s, z, y = solve_kkt_vanilla(Q, D, G, A, F, 
+                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
     else:
         assert False
 
