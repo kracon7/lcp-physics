@@ -103,7 +103,7 @@ def slide_demo(screen):
     bodies.append(r)
     joints.append(TotalConstraint(r))
 
-    r = Rect([100, 100], [60, 60],
+    r = Rect([100, 150], [60, 60],
              restitution=restitution, fric_coeff_s=fric_coeff_s)
     # r = Hull([100, 100], [[30, 30], [-30, 30], [-30, -30], [30, -30]])
     bodies.append(r)
@@ -111,7 +111,7 @@ def slide_demo(screen):
 
     recorder = None
     # recorder = Recorder(DT, screen)
-    world = World(bodies, joints, dt=DT, solver_type=2)
+    world = World(bodies, joints, dt=DT, solver_type=3)
     run_world(world, run_time=TIME, screen=screen, recorder=recorder)
 
 

@@ -173,7 +173,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
             dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
         elif solver == KKTSolvers.IR_UNOPT:
             D = bdiag(d)
-            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
+            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry)
         else:
             assert False
 
@@ -200,7 +200,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
             dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
         elif solver == KKTSolvers.IR_UNOPT:
             D = bdiag(d)
-            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
+            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry)
         else:
             assert False
 
@@ -245,46 +245,39 @@ def unpack_kkt(v, nz, nineq, neq):
     return x, s, z, y
 
 
-def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=1):
+def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=5):
     """Inefficient iterative refinement."""
     nineq, nz, neq, nBatch = get_sizes(G, A)
 
     eps = 1e-7
     Q_tilde = Q + eps * torch.eye(nz).type_as(Q).repeat(nBatch, 1, 1)
     D_tilde = D + eps * torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)
+    F_tilde = F - eps * torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)
 
-    # XXX Might not workd for batch size > 1
-    C_tilde = -eps * torch.eye(neq + nineq).type_as(Q_tilde).repeat(nBatch, 1, 1)
-    if F is not None:  # XXX inverted sign for F below
-        C_tilde[:, :nineq, :nineq] -= F
-    F_tilde = C_tilde[:, :nineq, :nineq]
-
-    dx, ds, dz, dy = factor_solve_kkt_reg(
-        Q_tilde, D_tilde, G, A, C_tilde, rx, rs, rz, ry, eps)
-    resx, ress, resz, resy = kkt_resid_reg(Q, D, G, A, F_tilde, eps,
-                        dx, ds, dz, dy, rx, rs, rz, ry)
+    dx, ds, dz, dy = factor_solve_kkt_full(Q_tilde, D_tilde, G, A, F_tilde, rx, rs, rz, ry)
+    resx, ress, resz, resy = kkt_resid_reg(Q, D, G, A, F,
+                                           dx, ds, dz, dy, rx, rs, rz, ry)
     for k in range(niter):
-        ddx, dds, ddz, ddy = factor_solve_kkt_reg(Q_tilde, D_tilde, G, A, C_tilde,
-                                                  -resx, -ress, -resz,
-                                                  -resy if resy is not None else None,
-                                                  eps)
+        ddx, dds, ddz, ddy = factor_solve_kkt_full(Q_tilde, D_tilde, G, A, F_tilde,
+                                                  resx, ress, resz,
+                                                  resy if resy is not None else None)
         dx, ds, dz, dy = [v + dv if v is not None else None
                           for v, dv in zip((dx, ds, dz, dy), (ddx, dds, ddz, ddy))]
-        resx, ress, resz, resy = kkt_resid_reg(Q, D, G, A, F_tilde, eps,
-                            dx, ds, dz, dy, rx, rs, rz, ry)
+        resx, ress, resz, resy = kkt_resid_reg(Q, D, G, A, F,
+                                               dx, ds, dz, dy, rx, rs, rz, ry)
 
     return dx, ds, dz, dy
 
 
-def kkt_resid_reg(Q_tilde, D_tilde, G, A, F_tilde, eps, dx, ds, dz, dy, rx, rs, rz, ry):
+def kkt_resid_reg(Q, D, G, A, F, dx, ds, dz, dy, rx, rs, rz, ry):
     dx, ds, dz, dy = [x.unsqueeze(2) if x is not None else None for x in [
         dx, ds, dz, dy]]
-    resx = Q_tilde.bmm(dx) + G.transpose(1, 2).bmm(dz) + rx.unsqueeze(2)
+    resx = Q.bmm(dx) + G.transpose(1, 2).bmm(dz) + rx.unsqueeze(2)
     if dy is not None:
         resx += A.transpose(1, 2).bmm(dy)
-    ress = D_tilde.bmm(ds) + dz + rs.unsqueeze(2)
-    resz = G.bmm(dx) + ds + F_tilde.bmm(dz) + rz.unsqueeze(2)  # XXX
-    resy = A.bmm(dx) - eps * dy + ry.unsqueeze(2) if dy is not None else None
+    ress = D.bmm(ds) + dz + rs.unsqueeze(2)
+    resz = G.bmm(dx) + ds - F.bmm(dz) + rz.unsqueeze(2)  # XXX
+    resy = A.bmm(dx) + ry.unsqueeze(2) if dy is not None else None
     resx, ress, resz, resy = (
         v.squeeze(2) if v is not None else None for v in (resx, ress, resz, resy))
 

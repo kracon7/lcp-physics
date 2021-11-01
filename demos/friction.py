@@ -17,7 +17,7 @@ from lcp_physics.physics.utils import Defaults, Recorder
 from lcp_physics.physics.world import World, run_world
 
 
-TIME = 0.2
+TIME = 5
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
@@ -39,14 +39,15 @@ def make_world(radius):
     # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, mu_s=mu_s)
     # bodies.append(c3)
 
-    initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
+    initial_force = torch.FloatTensor([0, 0.05, 0]).to(DEVICE)
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1, solver_type=2)
+    world = World(bodies, joints, dt=DT, max_iter=20, extend=1, solver_type=3, 
+                  post_stab=True, strict_no_penetration=False)
     return world
     
 
