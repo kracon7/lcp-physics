@@ -77,15 +77,15 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     ns = (nineq, nz, neq, nBatch)
 
     # Find initial values
-    if solver == KKTSolvers.LU_FULL:
-        D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
-        x, s, z, y = factor_solve_kkt_full(Q, D, G, A, F, 
-                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
-    elif solver == KKTSolvers.LU_PARTIAL:
+    if solver == KKTSolvers.LU_PARTIAL:
         d = Q.new_ones(nBatch, nineq)
         factor_kkt(S_LU, R, d)
         x, s, z, y = solve_kkt(Q_LU, d, G, A, S_LU,
                     p, Q.new_zeros(nBatch, nineq), -h, -b if neq > 0 else None)
+    elif solver == KKTSolvers.LU_FULL:
+        D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+        x, s, z, y = factor_solve_kkt_full(Q, D, G, A, F, 
+                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
     elif solver == KKTSolvers.IR_UNOPT:
         D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
         x, s, z, y = solve_kkt_ir(Q, D, G, A, F,
@@ -166,13 +166,13 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
                 print(INACC_ERR)
             return best['x'], best['y'], best['z'], best['s']
 
-        if solver == KKTSolvers.LU_FULL:
+        if solver == KKTSolvers.LU_PARTIAL:
+            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        elif solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
             dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
-        elif solver == KKTSolvers.LU_PARTIAL:
-            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
         elif solver == KKTSolvers.IR_UNOPT:
-            D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+            D = bdiag(d)
             dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
         else:
             assert False
@@ -193,13 +193,13 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         rz = Q.new_zeros(nBatch, nineq)
         ry = Q.new_zeros(nBatch, neq)
 
-        if solver == KKTSolvers.LU_FULL:
+        if solver == KKTSolvers.LU_PARTIAL:
+            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        elif solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
             dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
-        elif solver == KKTSolvers.LU_PARTIAL:
-            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
         elif solver == KKTSolvers.IR_UNOPT:
-            D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+            D = bdiag(d)
             dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
         else:
             assert False
