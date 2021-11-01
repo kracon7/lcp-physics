@@ -31,10 +31,10 @@ def lu_solve_hack(b, A_LU):
     '''
     function to replace btrisolve() from torch==1.0.0 in original version
     Input:
-        b -- (∗,m)
+        b -- (∗,m) or (*,m,k)
         A_LU -- (∗,m,m)
     Output:
-        x -- (*,m)
+        x -- (*,m) or (*,m,k)
     '''
     if b.dim()==2:
         x = torch.lu_solve(b.unsqueeze(-1), *A_LU)
@@ -79,17 +79,17 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
     # Find initial values
     if solver == KKTSolvers.LU_FULL:
         D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
-        x, s, z, y = factor_solve_kkt_full(
-            Q, D, G, A, F, 
-            -p, torch.zeros(nBatch, nineq).type_as(Q), h, b if neq > 0 else None,
-            ns)
+        x, s, z, y = factor_solve_kkt_full(Q, D, G, A, F, 
+                    p, torch.zeros(nBatch, nineq).type_as(Q), -h, -b if neq > 0 else None)
     elif solver == KKTSolvers.LU_PARTIAL:
         d = Q.new_ones(nBatch, nineq)
         factor_kkt(S_LU, R, d)
-        x, s, z, y = solve_kkt(
-            Q_LU, d, G, A, S_LU,
-            p, Q.new_zeros(nBatch, nineq),
-            -h, -b if neq > 0 else None)
+        x, s, z, y = solve_kkt(Q_LU, d, G, A, S_LU,
+                    p, Q.new_zeros(nBatch, nineq), -h, -b if neq > 0 else None)
+    elif solver == KKTSolvers.IR_UNOPT:
+        D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+        x, s, z, y = solve_kkt_ir(Q, D, G, A, F,
+                    -p, torch.zeros(nBatch, nineq).type_as(Q), h, b if neq > 0 else None)
     else:
         assert False
 
@@ -168,11 +168,12 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
 
         if solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
-            dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(
-                Q, D, G, A, F, -rx, -rs, -rz, -ry, ns)
+            dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
         elif solver == KKTSolvers.LU_PARTIAL:
-            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(
-                Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        elif solver == KKTSolvers.IR_UNOPT:
+            D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+            dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
         else:
             assert False
 
@@ -194,11 +195,12 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
 
         if solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
-            dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(
-                Q, D, G, A, F, -rx, -rs, -rz, -ry, ns)
+            dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry)
         elif solver == KKTSolvers.LU_PARTIAL:
-            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
-                Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
+        elif solver == KKTSolvers.IR_UNOPT:
+            D = torch.eye(nineq).repeat(nBatch, 1, 1).type_as(Q)
+            dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt_ir(Q, D, G, A, F, -rx, -rs, -rz, -ry)
         else:
             assert False
 
@@ -243,21 +245,6 @@ def unpack_kkt(v, nz, nineq, neq):
     return x, s, z, y
 
 
-def kkt_resid_reg(Q_tilde, D_tilde, G, A, F_tilde, eps, dx, ds, dz, dy, rx, rs, rz, ry):
-    dx, ds, dz, dy = [x.unsqueeze(2) if x is not None else None for x in [
-        dx, ds, dz, dy]]
-    resx = Q_tilde.bmm(dx) + G.transpose(1, 2).bmm(dz) + rx.unsqueeze(2)
-    if dy is not None:
-        resx += A.transpose(1, 2).bmm(dy)
-    ress = D_tilde.bmm(ds) + dz + rs.unsqueeze(2)
-    resz = G.bmm(dx) + ds + F_tilde.bmm(dz) + rz.unsqueeze(2)  # XXX
-    resy = A.bmm(dx) - eps * dy + ry.unsqueeze(2) if dy is not None else None
-    resx, ress, resz, resy = (
-        v.squeeze(2) if v is not None else None for v in (resx, ress, resz, resy))
-
-    return resx, ress, resz, resy
-
-
 def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=1):
     """Inefficient iterative refinement."""
     nineq, nz, neq, nBatch = get_sizes(G, A)
@@ -287,6 +274,21 @@ def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=1):
                             dx, ds, dz, dy, rx, rs, rz, ry)
 
     return dx, ds, dz, dy
+
+
+def kkt_resid_reg(Q_tilde, D_tilde, G, A, F_tilde, eps, dx, ds, dz, dy, rx, rs, rz, ry):
+    dx, ds, dz, dy = [x.unsqueeze(2) if x is not None else None for x in [
+        dx, ds, dz, dy]]
+    resx = Q_tilde.bmm(dx) + G.transpose(1, 2).bmm(dz) + rx.unsqueeze(2)
+    if dy is not None:
+        resx += A.transpose(1, 2).bmm(dy)
+    ress = D_tilde.bmm(ds) + dz + rs.unsqueeze(2)
+    resz = G.bmm(dx) + ds + F_tilde.bmm(dz) + rz.unsqueeze(2)  # XXX
+    resy = A.bmm(dx) - eps * dy + ry.unsqueeze(2) if dy is not None else None
+    resx, ress, resz, resy = (
+        v.squeeze(2) if v is not None else None for v in (resx, ress, resz, resy))
+
+    return resx, ress, resz, resy
 
 
 def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
@@ -377,12 +379,12 @@ def factor_solve_kkt_full(Q, D, G, A, F, rx, rs, rz, ry, ns):
         A_ = torch.cat([torch.cat([G, torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)], 2),
                         torch.cat([A, torch.zeros(nBatch, neq, nineq).type_as(Q)], 2)
                     ], 1)
-        g_ = torch.cat([rx, rs], 1)
-        h_ = torch.cat([rz, ry], 1)
+        g_ = - torch.cat([rx, rs], 1)
+        h_ = - torch.cat([rz, ry], 1)
     else:
         A_ = torch.cat([G, torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)], 2)
-        g_ = torch.cat([rx, rs], 1)
-        h_ = rz
+        g_ = - torch.cat([rx, rs], 1)
+        h_ = - rz
 
     H_LU = btrifact_hack(H_)
 
