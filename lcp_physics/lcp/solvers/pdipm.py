@@ -169,7 +169,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         if solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
             dx_aff, ds_aff, dz_aff, dy_aff = factor_solve_kkt_full(
-                Q, D, G, A, F, rx, rs, rz, ry, ns)
+                Q, D, G, A, F, -rx, -rs, -rz, -ry, ns)
         elif solver == KKTSolvers.LU_PARTIAL:
             dx_aff, ds_aff, dz_aff, dy_aff = solve_kkt(
                 Q_LU, d, G, A, S_LU, rx, rs, rz, ry)
@@ -195,7 +195,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         if solver == KKTSolvers.LU_FULL:
             D = bdiag(d)
             dx_cor, ds_cor, dz_cor, dy_cor = factor_solve_kkt_full(
-                Q, D, G, A, F, rx, rs, rz, ry, ns)
+                Q, D, G, A, F, -rx, -rs, -rz, -ry, ns)
         elif solver == KKTSolvers.LU_PARTIAL:
             dx_cor, ds_cor, dz_cor, dy_cor = solve_kkt(
                 Q_LU, d, G, A, S_LU, rx, rs, rz, ry)

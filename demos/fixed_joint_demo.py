@@ -39,7 +39,7 @@ def fixed_joint_demo(screen):
 
     recorder = None
     # recorder = Recorder(DT, screen)
-    world = World(bodies, joints, dt=DT)
+    world = World(bodies, joints, dt=DT, solver_type=2)
     run_world(world, run_time=TIME, screen=screen, recorder=recorder)
 
 
