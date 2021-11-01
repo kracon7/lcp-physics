@@ -5,7 +5,7 @@ import torch
 from enum import Enum
 
 
-from lcp_physics.lcp.util import get_sizes, bdiag
+from lcp_physics.lcp.util import get_sizes, bdiag, print_array
 
 
 shown_btrifact_warning = False
