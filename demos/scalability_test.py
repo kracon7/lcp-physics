@@ -47,7 +47,7 @@ def make_world(particle_pos, particle_radius, hand):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, solver_type=2)
+    world = World(bodies, joints, dt=DT, solver_type=3)
     return world
     
 

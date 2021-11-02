@@ -46,7 +46,7 @@ def make_world(radius):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1, solver_type=3)#, post_stab=True, strict_no_penetration=False)
+    world = World(bodies, joints, dt=DT, extend=1, solver_type=4)#, post_stab=True, strict_no_penetration=False)
     return world
     
 

@@ -249,12 +249,31 @@ def unpack_kkt(v, nz, nineq, neq):
     y = v[:, i:i + neq]
     return x, s, z, y
 
+def stack_K_(Q, D, G, A, F):
+    nineq, nz, neq, nBatch = get_sizes(G, A)
+    K = torch.zeros(nBatch, nz+2*nineq+neq, nz+2*nineq+neq)
+    K[:, :nz, :nz] = Q
+    K[:, nz:nz+nineq, nz:nz+nineq] = D
+    K[:, nz+nineq:nz+2*nineq, :nz] = G
+    K[:, :nz, nz+nineq:nz+2*nineq] = G.transpose(1,2)
+    K[:, nz+nineq:nz+2*nineq, nz:nz+nineq] = torch.eye(nineq).type_as(Q).repeat(nBatch,1,1)
+    K[:, nz:nz+nineq, nz+nineq:nz+2*nineq] = torch.eye(nineq).type_as(Q).repeat(nBatch,1,1)
+    K[:, nz+nineq:nz+2*nineq, nz+nineq:nz+2*nineq] = -F
+    if neq > 0:
+        K[:, nz+2*nineq:, :nz] = A
+        K[:, :nz, nz+2*nineq:] = A.transpose(1,2)
+    return K
 
-def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=5):
+def solve_kkt_vanilla(Q, D, G, A, F, rx, rs, rz, ry):
+    nineq, nz, neq, nBatch = get_sizes(G, A)
+    K = stack_K_(Q, D, G, A, F)
+    v = torch.cat([rx, rs, rz, ry if neq > 0 else None], 1)
+    return K
+
+def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=1, eps=1e-7):
     """Inefficient iterative refinement."""
     nineq, nz, neq, nBatch = get_sizes(G, A)
 
-    eps = 1e-7
     Q_tilde = Q + eps * torch.eye(nz).type_as(Q).repeat(nBatch, 1, 1)
     D_tilde = D + eps * torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)
     F_tilde = F - eps * torch.eye(nineq).type_as(Q).repeat(nBatch, 1, 1)
@@ -313,9 +332,7 @@ def factor_solve_kkt_reg(Q_tilde, D, G, A, C_tilde, rx, rs, rz, ry, eps):
     invH_A_ = lu_solve_hack(A_.transpose(1, 2), H_LU)  # H-1 AT
     invH_g_ = lu_solve_hack(g_, H_LU)  # H-1 g
 
-    S_ = torch.bmm(A_, invH_A_)  # A H-1 AT
-    # A H-1 AT + C_tilde
-    S_ -= C_tilde
+    S_ = torch.bmm(A_, invH_A_) - C_tilde  # A H-1 AT
     S_LU = btrifact_hack(S_)
     # [(H-1 g)T AT]T - h = A H-1 g - h
     t_ = torch.bmm(invH_g_.unsqueeze(1), A_.transpose(1, 2)).squeeze(1) - h_
