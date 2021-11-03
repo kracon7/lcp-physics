@@ -267,7 +267,7 @@ def stack_K_(Q, D, G, A, F):
 def solve_kkt_vanilla(Q, D, G, A, F, rx, rs, rz, ry):
     nineq, nz, neq, nBatch = get_sizes(G, A)
     K = stack_K_(Q, D, G, A, F)
-    v = torch.cat([rx, rs, rz, ry if neq > 0 else None], 1)
+    v = torch.cat([rx, rs, rz, ry if neq > 0 else torch.tensor([[]]).type_as(Q)], 1)
     return K
 
 def solve_kkt_ir(Q, D, G, A, F, rx, rs, rz, ry, niter=1, eps=1e-7):

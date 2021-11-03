@@ -46,7 +46,7 @@ def make_world(radius):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1, solver_type=4)#, post_stab=True, strict_no_penetration=False)
+    world = World(bodies, joints, dt=DT, extend=1, solver_type=2)#, post_stab=True, strict_no_penetration=False)
     return world
     
 
@@ -68,6 +68,8 @@ def fixed_joint_demo(screen):
     start_time = time.time()
 
     f_log, v_log = [], []
+
+    world.set_v(torch.tensor([0, 0.1, 0]).type_as(world.Jc()))
 
     while world.t < TIME:
         world.step()
@@ -117,16 +119,15 @@ def fixed_joint_demo(screen):
         print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
                                                1 / animation_dt), end='')
 
-    fig, ax = plt.subplots(6,1)
+    fig, ax = plt.subplots(2,1)
     f_log = np.stack(f_log)
     v_log = np.stack(v_log)
 
-    ax[0].plot(f_log[:, 0])
-    ax[1].plot(v_log[:, 0])
-    ax[2].plot(f_log[:, 1])
-    ax[3].plot(v_log[:, 1])
-    ax[4].plot(f_log[:, 2])
-    ax[5].plot(v_log[:, 2])
+    ax[0].plot(f_log[:, 1])
+    ax[1].plot(v_log[:, 1])
+    ax[0].set_ylabel('fx')
+    ax[1].set_ylabel('vx')
+    ax[1].set_xlabel('timestep')
 
     plt.show()
 

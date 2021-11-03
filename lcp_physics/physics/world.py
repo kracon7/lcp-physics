@@ -247,12 +247,18 @@ class World:
         return torch.diag(mu_s)
 
     def mu_b(self):
-        mu_b = self._M.new_zeros(3*len(self.bodies))
+        mu_b = self._M.new_zeros(2*len(self.bodies))
         for i, b in enumerate(self.bodies):
-            mu_b[3*i:3*(i+1)] = torch.stack([b.fric_coeff_b[1], 
-                                             b.fric_coeff_b[0], 
-                                             b.fric_coeff_b[0]])
+            mu_b[2*i:2*(i+1)] = torch.stack([b.fric_coeff_b[0], 
+                                             b.fric_coeff_b[1]])
         return mu_b
+
+    def mu_b_diag_M(self):
+        result = self._M.new_zeros(2*len(self.bodies))
+        for i, b in enumerate(self.bodies):
+            result[2*i:2*(i+1)] = torch.stack([b.fric_coeff_b[0] * b.M[0,0], 
+                                               b.fric_coeff_b[1] * b.M[1,1]])
+        return result
 
     def E(self):
         return self._memoized_E(len(self.contacts))
