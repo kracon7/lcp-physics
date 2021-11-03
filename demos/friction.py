@@ -33,20 +33,20 @@ def make_world(radius):
     c1 = Circle(pos, radius, fric_coeff_s=mu_s)
     bodies.append(c1)
 
-    # c2 = Circle([pos[0]+2*radius, pos[1]+5], radius, mu_s=mu_s)
-    # bodies.append(c2)
+    c2 = Circle([pos[0] + 2*radius + 7, pos[1]], radius, fric_coeff_s=mu_s)
+    bodies.append(c2)
 
-    # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, mu_s=mu_s)
-    # bodies.append(c3)
+    c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff_s=mu_s)
+    bodies.append(c3)
 
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo
-    learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
+    learned_force = lambda t: initial_force if t < 1 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1, solver_type=2)#, post_stab=True, strict_no_penetration=False)
+    world = World(bodies, joints, dt=DT, extend=1, solver_type=3)#, post_stab=True, strict_no_penetration=False)
     return world
     
 
@@ -69,7 +69,7 @@ def fixed_joint_demo(screen):
 
     f_log, v_log = [], []
 
-    world.set_v(torch.tensor([0, 0.1, 0]).type_as(world.Jc()))
+    # world.set_v(torch.tensor([0, 0.1, 0, 0, 0, 0]).type_as(world.Jc()))
 
     while world.t < TIME:
         world.step()
