@@ -36,10 +36,10 @@ def make_world(radius):
     c2 = Circle([pos[0] + 2*radius + 7, pos[1]], radius, fric_coeff_s=mu_s)
     bodies.append(c2)
 
-    c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff_s=mu_s)
-    bodies.append(c3)
+    # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff_s=mu_s)
+    # bodies.append(c3)
 
-    initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
+    initial_force = torch.FloatTensor([0, 0.02, 0]).to(DEVICE)
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo
@@ -54,7 +54,7 @@ def fixed_joint_demo(screen):
     radius = 30
     world = make_world(radius)
     recorder = None
-    # recorder = Recorder(DT, screen)
+    recorder = Recorder(DT, screen)
     
     if screen is not None:
         import pygame
@@ -72,11 +72,11 @@ def fixed_joint_demo(screen):
     # world.set_v(torch.tensor([0, 0.1, 0, 0, 0, 0]).type_as(world.Jc()))
 
     while world.t < TIME:
-        world.step()
-
         # record the force and velocities
         f = world.apply_forces(world.t).detach().numpy()
         v = world.get_v().detach().numpy()
+
+        world.step()
 
         f_log.append(f)
         v_log.append(v)
@@ -127,6 +127,7 @@ def fixed_joint_demo(screen):
     ax[1].plot(v_log[:, 1])
     ax[0].set_ylabel('fx')
     ax[1].set_ylabel('vx')
+    ax[1].set_ylim(-2, 30)
     ax[1].set_xlabel('timestep')
 
     plt.show()

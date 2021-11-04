@@ -219,11 +219,14 @@ class World:
         v = self.get_v()
 
         for i, b in enumerate(self.bodies):
-            vi = v[i*3 : (i+1)*3]
+            vi = v[3*i : 3*(i+1)]
+            # if translation velocity is 0, add purtebation
             if torch.norm(vi[1:]) == 0:
+                v[3*i+1 : 3*(i+1)].add_(1e-8 * torch.rand(2).type_as(Jb))
+
                 Ji = torch.stack([
                         torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
-                        self._M.new_zeros(3)
+                        torch.cat([self._M.new_zeros(1), -vi[1:] / torch.norm(vi[1:])])
                      ])
             else:
                 Ji = torch.stack([
