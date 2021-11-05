@@ -54,7 +54,7 @@ def fixed_joint_demo(screen):
     radius = 30
     world = make_world(radius)
     recorder = None
-    recorder = Recorder(DT, screen)
+    # recorder = Recorder(DT, screen)
     
     if screen is not None:
         import pygame
