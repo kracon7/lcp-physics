@@ -22,7 +22,7 @@ class Defaults:
     RESTITUTION = 0
 
     FRIC_COEFF_S = 0.1
-    FRIC_COEFF_B = [0.01, 0.2]
+    FRIC_COEFF_B = [0.05, 0.2]
     FRIC_DIRS = 2
 
     FPS = 30

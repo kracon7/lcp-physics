@@ -87,9 +87,10 @@ class FixedJoint:
             self.pos2 = self.pos - self.body2.pos
 
     def draw(self, screen, pixels_per_meter=1):
-        start = (self.body1.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
-        end = (self.body2.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
-        return [pygame.draw.line(screen, (0, 255, 0), start, end, 2)]
+        return []
+        # start = (self.body1.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
+        # end = (self.body2.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
+        # return [pygame.draw.line(screen, (0, 255, 0), start, end, 2)]
 
 
 class YConstraint:

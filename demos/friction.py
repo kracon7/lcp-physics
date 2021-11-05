@@ -127,7 +127,7 @@ def fixed_joint_demo(screen):
     ax[1].plot(v_log[:, 1])
     ax[0].set_ylabel('fx')
     ax[1].set_ylabel('vx')
-    ax[1].set_ylim(-2, 30)
+    # ax[1].set_ylim(-2, 30)
     ax[1].set_xlabel('timestep')
 
     plt.show()
