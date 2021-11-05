@@ -39,11 +39,11 @@ def make_world(radius):
     # c3 = Circle([pos[0]-2*radius, pos[1]-100], radius, fric_coeff_s=mu_s)
     # bodies.append(c3)
 
-    initial_force = torch.FloatTensor([0, 0.02, 0]).to(DEVICE)
+    initial_force = torch.FloatTensor([0, 0.05, 0]).to(DEVICE)
     initial_force = Variable(initial_force, requires_grad=True)
 
     # Initial demo
-    learned_force = lambda t: initial_force if t < 1 else ExternalForce.ZEROS
+    learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(learned_force))
 
     world = World(bodies, joints, dt=DT, extend=1, solver_type=3)#, post_stab=True, strict_no_penetration=False)
@@ -127,7 +127,8 @@ def fixed_joint_demo(screen):
     ax[1].plot(v_log[:, 1])
     ax[0].set_ylabel('fx')
     ax[1].set_ylabel('vx')
-    # ax[1].set_ylim(-2, 30)
+    ax[0].set_ylim(-1, 25)
+    ax[1].set_ylim(-2, 15)
     ax[1].set_xlabel('timestep')
 
     plt.show()
