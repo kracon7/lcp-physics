@@ -128,7 +128,7 @@ def fixed_joint_demo(screen):
     ax[0].set_ylabel('fx')
     ax[1].set_ylabel('vx')
     ax[0].set_ylim(-1, 25)
-    ax[1].set_ylim(-2, 15)
+    ax[1].set_ylim(-2, 1)
     ax[1].set_xlabel('timestep')
 
     plt.show()
