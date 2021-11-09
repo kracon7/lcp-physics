@@ -17,7 +17,7 @@ DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
 def grad_demo(screen):
-    initial_force = torch.FloatTensor([0, 3, 0]).to(DEVICE)
+    initial_force = torch.FloatTensor([0, 5, 0]).to(DEVICE)
     initial_force[2] = 0
     initial_force = Variable(initial_force, requires_grad=True)
 
@@ -34,7 +34,7 @@ def grad_demo(screen):
     run_world(world, run_time=TIME, screen=screen, recorder=rec)
 
     learning_rate = 0.001
-    max_iter = 100
+    max_iter = 40
 
     dist_hist = []
     last_dist = 1e10
@@ -103,7 +103,7 @@ def make_world(learned_force):
     # joints.append(Joint(c2, None, [500, 275]))
     c2.add_no_contact(target)
 
-    world = World(bodies, joints, dt=DT)
+    world = World(bodies, joints, dt=DT, extend=1)
     return world, c2, target
 
 
