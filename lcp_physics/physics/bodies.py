@@ -129,7 +129,7 @@ class Circle(Body):
                          eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
-        return mass * 3.1416 / 2 # * self.rad * self.rad
+        return mass / 2 * self.rad * self.rad
 
     def _create_geom(self):
         self.geom = ode.GeomSphere(None, self.rad.item() + self.eps.item())
