@@ -33,11 +33,17 @@ def make_world(radius, fric_coeff_b):
     c1 = Circle(pos, radius, fric_coeff_b=[0.005, 0.45])
     bodies.append(c1)
 
-    img = cv2.imread(os.path.join(ROOT, 'fig/T-Shape.png'))
-    img = cv2.resize(img, (20, 15))
-    x_cord, y_cord = np.where(img[:,:,0]<1)
+    img = cv2.imread(os.path.join(ROOT, 'fig/hammer.png'))
+    mask = img[:,:,0] < 255
+    x_cord, y_cord = np.where(mask)
     x_cord, y_cord = x_cord - x_cord.min(), y_cord - y_cord.min()
     particle_pos = 2 * radius * np.stack([x_cord, y_cord]).T + np.array([300, 300])
+
+    mass_profile = img[:,:,0][mask] / 10
+
+    img = cv2.imread(os.path.join(ROOT, 'fig/hammer_fric.png')).astype('float') / 255
+    bottom_fric_profile = np.stack([img[:,:,2][mask]/100, img[:,:,1][mask]], axis=-1)
+
     composite_body = Composite(particle_pos, particle_radius)
     bodies += composite_body.bodies
     joints += composite_body.joints
