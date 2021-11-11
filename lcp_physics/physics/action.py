@@ -1,8 +1,33 @@
 import os
 import numpy as np
+import scipy.spatial as spatial
 from scipy.spatial import Delaunay
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit 
+
+def random_action(particle_pos, particle_radius, hand_radius):
+	'''
+	random sample action (starting position and pushing direction) for pushing
+	Input
+		particle_pos - (N, 2) array, center position of object particles
+		particle_radius - float, radius
+		hand_radius - float, radius
+	'''
+	polygon, polygon_coord, normals = build_mesh(particle_pos, particle_radius)
+	
+
+
+def overlap_check(pts1, r1, pts2, r2):
+	'''
+	check if circles with center pts1 and radius r1 has overelap with circles 
+	with center pts2 and radius r2
+	'''
+	point_tree = spatial.cKDTree(pts1)
+    neighbors_list = point_tree.query_ball_point(pts2, r1 + r2)
+    if len(neighbors_list) > 0:
+    	return True
+    else:
+    	return False
 
 def build_mesh(points, voxel_size):
 	tri = Delaunay(points)
@@ -16,17 +41,19 @@ def build_mesh(points, voxel_size):
 	polygon_coord = smooth_points
 	normals = normals
 
-	# visualize the mesh and normal
-	fig, ax = plt.subplots(1,1)
-	plt.triplot(points[:,0], points[:,1], triangles)
-	plt.plot(points[:,0], points[:,1], 'o')
-	num_vertices = smooth_polygon.shape[0]
-	for i in range(num_vertices):
-	    pt_coord = smooth_points[smooth_polygon[i, 0]]
-	    plt.plot([pt_coord[0], pt_coord[0] + 3*normals[i,0]], 
-	               [pt_coord[1], pt_coord[1] + 3*normals[i,1]], color='r')
-	plt.plot(smooth_points[:, 0], smooth_points[:,1], '+')
-	plt.show()
+	# # visualize the mesh and normal
+	# fig, ax = plt.subplots(1,1)
+	# plt.triplot(points[:,0], points[:,1], triangles)
+	# plt.plot(points[:,0], points[:,1], 'o')
+	# num_vertices = smooth_polygon.shape[0]
+	# for i in range(num_vertices):
+	#     pt_coord = smooth_points[smooth_polygon[i, 0]]
+	#     plt.plot([pt_coord[0], pt_coord[0] + 3*normals[i,0]], 
+	#                [pt_coord[1], pt_coord[1] + 3*normals[i,1]], color='r')
+	# plt.plot(smooth_points[:, 0], smooth_points[:,1], '+')
+	# plt.show()
+
+	return polygon, polygon_coord, normals
 
 def clean_edges(points, triangles, threshold=0.05):
     '''

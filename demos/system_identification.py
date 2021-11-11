@@ -15,7 +15,7 @@ from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, plot,    Recorder
 from lcp_physics.physics.world import World, run_world
-from lcp_physics.physics.action import build_mesh
+from lcp_physics.physics.action import build_mesh, random_action
 
 
 TIME = 5
@@ -39,6 +39,19 @@ def init_composite_object(particle_radius, mass_img, fric_img):
                                 fric_coeff_b=bottom_fric_profile)
     return composite_body
 
+def init_world():
+    # init composite object with offset and rotation
+
+    # get composite object particle pos
+
+    # init random action (start position and direction)
+
+    # init hand object
+
+    # init force and apply force
+
+    # init world
+
 def make_world():
     
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
@@ -60,9 +73,6 @@ def make_world():
     
     bodies += composite_body.bodies
     joints += composite_body.joints
-
-    # target = Circle([650, 300], radius, fric_coeff_b=fric_coeff_b)
-    # bodies.append(target)
 
     c1.add_force(ExternalForce(push_force))
 
