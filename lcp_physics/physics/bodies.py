@@ -351,6 +351,9 @@ class Composite():
 
         self.bodies = bodies
         self.joints = joints
+        self.radius = radius
+        self.mass = mass
+        self.fric_coeff_b = fric_coeff_b
 
     def get_particle_pos(self):
         pos = []

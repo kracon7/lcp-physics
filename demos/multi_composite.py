@@ -55,7 +55,7 @@ def fixed_joint_demo(screen, particle_radius):
     world = World(bodies, joints, dt=DT, extend=1, solver_type=3)
 
     recorder = None
-    recorder = Recorder(DT, screen)
+    # recorder = Recorder(DT, screen)
     if screen is not None:
         import pygame
         background = pygame.Surface(screen.get_size())

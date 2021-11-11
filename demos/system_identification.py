@@ -15,6 +15,7 @@ from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, plot,    Recorder
 from lcp_physics.physics.world import World, run_world
+from lcp_physics.physics.action import build_mesh
 
 
 TIME = 5
@@ -22,7 +23,7 @@ DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-def init_composite_object(mass_img, fric_img):
+def init_composite_object(particle_radius, mass_img, fric_img):
     img = cv2.imread(os.path.join(ROOT, mass_img))
     mask = img[:,:,0] < 255
     x_cord, y_cord = np.where(mask)
@@ -55,7 +56,7 @@ def make_world():
 
     particle_radius = 10
 
-    composite_body = init_composite_object('fig/hammer_mass.png', 'fig/hammer_fric.png')
+    composite_body = init_composite_object(particle_radius, 'fig/hammer_mass.png', 'fig/hammer_fric.png')
     
     bodies += composite_body.bodies
     joints += composite_body.joints
