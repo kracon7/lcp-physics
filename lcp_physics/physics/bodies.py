@@ -330,18 +330,17 @@ class Composite():
         if isinstance(mass, float):
             mass = mass * np.ones(N)
 
+        if isinstance(fric_coeff_b, list):
+            fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
+
+        for i in range(N):
+            c = Circle(particle_pos[i], radius, mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b[i])
+
+            bodies.append(c)
+
         for i in range(N-1):
-            p1, p2 = particle_pos[i], particle_pos[i+1]
-            c1 = Circle(p1, radius, mass=mass[i], 
-                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b)
-            c2 = Circle(p2, radius, mass=mass[i], 
-                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b)
-
-            if i == 0:
-                bodies.append(c1)
-            bodies.append(c2)
-
-            joints += [FixedJoint(bodies[0], bodies[-1])]
+            joints += [FixedJoint(bodies[i], bodies[-1])]
 
         # add contact exclusion
         no_contact = self.find_neighbors(particle_pos, radius)
@@ -352,6 +351,13 @@ class Composite():
 
         self.bodies = bodies
         self.joints = joints
+
+    def get_particle_pos(self):
+        pos = []
+        for b in self.bodies:
+            pos.append(b.pos)
+        pos = np.stack(pos)
+        return pos
 
     def find_neighbors(self, particle_pos, radius):
         '''
