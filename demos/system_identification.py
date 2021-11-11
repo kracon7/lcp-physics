@@ -22,51 +22,54 @@ DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-def make_world(radius, fric_coeff_b):
-    '''
-    build world based on particle positions
-    '''
-    bodies = []
-    joints = []
-
-    pos = [500, 300]
-    c1 = Circle(pos, radius, fric_coeff_b=[0.005, 0.45])
-    bodies.append(c1)
-
-    img = cv2.imread(os.path.join(ROOT, 'fig/hammer.png'))
+def init_composite_object(mass_img, fric_img):
+    img = cv2.imread(os.path.join(ROOT, mass_img))
     mask = img[:,:,0] < 255
     x_cord, y_cord = np.where(mask)
     x_cord, y_cord = x_cord - x_cord.min(), y_cord - y_cord.min()
-    particle_pos = 2 * radius * np.stack([x_cord, y_cord]).T + np.array([300, 300])
+    particle_pos = 2 * particle_radius * np.stack([x_cord, y_cord]).T + np.array([500, 300])
 
-    mass_profile = img[:,:,0][mask] / 10
+    mass_profile = img[:,:,0][mask].astype('float') / 1e3
 
-    img = cv2.imread(os.path.join(ROOT, 'fig/hammer_fric.png')).astype('float') / 255
+    img = cv2.imread(os.path.join(ROOT, fric_img)).astype('float') / 255
     bottom_fric_profile = np.stack([img[:,:,2][mask]/100, img[:,:,1][mask]], axis=-1)
 
-    composite_body = Composite(particle_pos, particle_radius)
+    composite_body = Composite(particle_pos, particle_radius, mass=mass_profile, 
+                                fric_coeff_b=bottom_fric_profile)
+    return composite_body
+
+def make_world():
+    
+    initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
+    initial_force = Variable(initial_force)
+    push_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
+
+    hand_pos = [300, 330]
+    hand_radius = 30
+
+    bodies = []
+    joints = []
+
+    c1 = Circle(hand_pos, hand_radius, fric_coeff_b=[0.005, 0.45])
+    bodies.append(c1)
+
+    particle_radius = 10
+
+    composite_body = init_composite_object('fig/hammer_mass.png', 'fig/hammer_fric.png')
+    
     bodies += composite_body.bodies
     joints += composite_body.joints
 
-    target = Circle([650, 300], radius, fric_coeff_b=fric_coeff_b)
-    bodies.append(target)
+    # target = Circle([650, 300], radius, fric_coeff_b=fric_coeff_b)
+    # bodies.append(target)
 
-    initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
-    initial_force = Variable(initial_force, requires_grad=True)
-
-    c1.add_no_contact(target)
-    c2.add_no_contact(target)
-
-    # Initial demo
-    learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
-    c1.add_force(ExternalForce(learned_force))
+    c1.add_force(ExternalForce(push_force))
 
     world = World(bodies, joints, dt=DT, extend=1, solver_type=1)#, post_stab=True, strict_no_penetration=False)
-    return world, c2, target
+    return world
     
 
 def sys_id_demo(screen):
-    radius = 30
 
     if screen is not None:
         import pygame
@@ -74,9 +77,7 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    mu = torch.FloatTensor([0, 0.44]).to(DEVICE)
-    mu = Variable(mu, requires_grad=True)
-    world, c2, target = make_world(radius, mu)
+    world = make_world()
     recorder = None
     # recorder = Recorder(DT, screen)
 
@@ -88,7 +89,7 @@ def sys_id_demo(screen):
     dist_hist = []
     last_dist = 1e10
     for i in range(max_iter):
-        world, c2, target = make_world(radius, mu)
+        world = make_world(radius, mu)
         run_world(world, run_time=TIME, screen=screen, recorder=recorder)
 
         dist = (target.pos - c2.pos).norm()
@@ -108,7 +109,7 @@ def sys_id_demo(screen):
         last_dist = dist
         dist_hist.append(dist)
 
-    world, c2, target = make_world(radius, mu)
+    world = make_world(radius, mu)
     rec = None
     # rec = Recorder(DT, screen)
     run_world(world, run_time=TIME, screen=screen, recorder=rec)
