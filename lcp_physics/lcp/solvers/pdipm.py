@@ -167,7 +167,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
                 I_neq = I.repeat(neq, 1).t()
                 best['y'][I_neq] = y[I_neq]
         if nNotImproved == not_improved_lim or best['resids'].max().item() < eps or mu.min().item() > 1e100:
-            if best['resids'].max() > 1. and verbose >= 0:
+            if best['resids'].max() > 1. and verbose > 0:
                 print(INACC_ERR)
             return best['x'], best['y'], best['z'], best['s']
 
@@ -225,7 +225,7 @@ def forward(Q, p, G, h, A, b, F, Q_LU, S_LU, R,
         z += alpha_nineq * dz
         y = y + alpha_neq * dy if neq > 0 else None
 
-    if best['resids'].max() > 1. and verbose >= 0:
+    if best['resids'].max() > 1. and verbose > 0:
         print(INACC_ERR)
         print(best['resids'].max())
     return best['x'], best['y'], best['z'], best['s']

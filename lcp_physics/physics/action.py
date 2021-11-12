@@ -6,54 +6,66 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit 
 
 def random_action(particle_pos, particle_radius, hand_radius):
-	'''
-	random sample action (starting position and pushing direction) for pushing
-	Input
-		particle_pos - (N, 2) array, center position of object particles
-		particle_radius - float, radius
-		hand_radius - float, radius
-	'''
-	polygon, polygon_coord, normals = build_mesh(particle_pos, particle_radius)
-	
+    '''
+    random sample action (starting position and pushing direction) for pushing
+    Input
+        particle_pos - (N, 2) array, center position of object particles
+        particle_radius - float, radius
+        hand_radius - float, radius
+    '''
+    polygon, polygon_coord, normals = build_mesh(particle_pos, particle_radius)
+    # randomly select the vertex and normal
+    N = polygon.shape[0]
+    idx = np.random.choice(N)
+    vtx, nml = polygon_coord[idx], normals[idx]
+
+    start_pos = vtx + (particle_radius + hand_radius) * nml
+
+    while overlap_check(particle_pos, particle_radius, start_pos, hand_radius):
+        start_pos += 0.5 * nml
+
+    action = [start_pos, -nml]
+
+    return action
 
 
 def overlap_check(pts1, r1, pts2, r2):
-	'''
-	check if circles with center pts1 and radius r1 has overelap with circles 
-	with center pts2 and radius r2
-	'''
-	point_tree = spatial.cKDTree(pts1)
+    '''
+    check if circles with center pts1 and radius r1 has overelap with circles 
+    with center pts2 and radius r2
+    '''
+    point_tree = spatial.cKDTree(pts1)
     neighbors_list = point_tree.query_ball_point(pts2, r1 + r2)
     if len(neighbors_list) > 0:
-    	return True
+        return True
     else:
-    	return False
+        return False
 
 def build_mesh(points, voxel_size):
-	tri = Delaunay(points)
-	triangles = clean_edges(points, tri.simplices, 4*voxel_size)
-	edges, edge_in_tri_idx = find_boundary_edge(triangles)
-	polygon = construct_polygon(edges, points, triangles, edge_in_tri_idx)
-	smooth_polygon, smooth_points = corner_cutting(polygon, points, 3)
-	normals = compute_polygon_normal(smooth_polygon, smooth_points)
+    tri = Delaunay(points)
+    triangles = clean_edges(points, tri.simplices, 4*voxel_size)
+    edges, edge_in_tri_idx = find_boundary_edge(triangles)
+    polygon = construct_polygon(edges, points, triangles, edge_in_tri_idx)
+    smooth_polygon, smooth_points = corner_cutting(polygon, points, 3)
+    normals = compute_polygon_normal(smooth_polygon, smooth_points)
 
-	polygon = smooth_polygon
-	polygon_coord = smooth_points
-	normals = normals
+    polygon = smooth_polygon
+    polygon_coord = smooth_points
+    normals = normals
 
-	# # visualize the mesh and normal
-	# fig, ax = plt.subplots(1,1)
-	# plt.triplot(points[:,0], points[:,1], triangles)
-	# plt.plot(points[:,0], points[:,1], 'o')
-	# num_vertices = smooth_polygon.shape[0]
-	# for i in range(num_vertices):
-	#     pt_coord = smooth_points[smooth_polygon[i, 0]]
-	#     plt.plot([pt_coord[0], pt_coord[0] + 3*normals[i,0]], 
-	#                [pt_coord[1], pt_coord[1] + 3*normals[i,1]], color='r')
-	# plt.plot(smooth_points[:, 0], smooth_points[:,1], '+')
-	# plt.show()
+    # # visualize the mesh and normal
+    # fig, ax = plt.subplots(1,1)
+    # plt.triplot(points[:,0], points[:,1], triangles)
+    # plt.plot(points[:,0], points[:,1], 'o')
+    # num_vertices = smooth_polygon.shape[0]
+    # for i in range(num_vertices):
+    #     pt_coord = smooth_points[smooth_polygon[i, 0]]
+    #     plt.plot([pt_coord[0], pt_coord[0] + 3*normals[i,0]], 
+    #                [pt_coord[1], pt_coord[1] + 3*normals[i,1]], color='r')
+    # plt.plot(smooth_points[:, 0], smooth_points[:,1], '+')
+    # plt.show()
 
-	return polygon, polygon_coord, normals
+    return polygon, polygon_coord, normals
 
 def clean_edges(points, triangles, threshold=0.05):
     '''

@@ -15,3 +15,4 @@ experimental
 .idea
 .cache
 .ipynb_checkpoints
+tmp/*

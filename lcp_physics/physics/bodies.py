@@ -359,7 +359,7 @@ class Composite():
         pos = []
         for b in self.bodies:
             pos.append(b.pos)
-        pos = np.stack(pos)
+        pos = torch.stack(pos)
         return pos
 
     def find_neighbors(self, particle_pos, radius):
