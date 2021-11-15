@@ -20,14 +20,14 @@ from lcp_physics.physics.world import World, run_world
 from lcp_physics.physics.action import build_mesh, random_action
 
 
-TIME = 1
+TIME = 4
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 hand_radius = 30
 particle_radius = 10
 
-np.random.seed(0)
+np.random.seed(1)
 
 def image_to_pos(mass_img):
     img = cv2.imread(mass_img)
