@@ -1,5 +1,5 @@
 import time
-from functools import lru_cache
+from multiprocessing import Pool
 
 import ode
 import torch
@@ -356,27 +356,22 @@ def run_world(world, animation_dt=None, run_time=10, print_time=True,
             print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
                                                1 / animation_dt), end='')
 
-def run_world_batch(worlds, animation_dt=None, run_time=10, print_time=True,
-              screen=None, recorder=None, pixels_per_meter=1):
+def run_world_single(world, animation_dt=None, run_time=10):
+    pass
+
+def run_world_batch(worlds, animation_dt=None, run_time=10, print_time=True):
     """Helper function to run a simulation forward once a world is created.
     """
     # If in batched mode don't display simulation
-    if hasattr(world, 'worlds'):
-        screen = None
-
-    if screen is not None:
-        import pygame
-        background = pygame.Surface(screen.get_size())
-        background = background.convert()
-        background.fill((255, 255, 255))
+    with Pool(5) as p:
 
     if animation_dt is None:
-        animation_dt = float(world.dt)
+        animation_dt = float(worlds[0].dt)
     elapsed_time = 0.
     prev_frame_time = -animation_dt
     start_time = time.time()
 
-    while world.t < run_time:
+    while world[0].t < run_time:
         world.step()
 
         elapsed_time = time.time() - start_time
