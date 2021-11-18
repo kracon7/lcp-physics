@@ -356,25 +356,24 @@ def run_world(world, animation_dt=None, run_time=10, print_time=True,
             print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
                                                1 / animation_dt), end='')
 
-def run_world_single(world, animation_dt=None, run_time=10):
-    pass
+def run_world_single(world, run_time=10):
 
-def run_world_batch(worlds, animation_dt=None, run_time=10, print_time=True):
-    """Helper function to run a simulation forward once a world is created.
+    while world.t < run_time:
+        world.step()
+    return world
+
+def run_world_batch(worlds, run_time=10, print_time=True):
+    """batch forward simulation for a list of worlds
     """
-    # If in batched mode don't display simulation
-    with Pool(5) as p:
+    args = []
+    for w in worlds:
+        args.append([w, run_time])
 
-    if animation_dt is None:
-        animation_dt = float(worlds[0].dt)
-    elapsed_time = 0.
-    prev_frame_time = -animation_dt
     start_time = time.time()
 
-    while world[0].t < run_time:
-        world.step()
+    with Pool(5) as p:
+        worlds_after = p.starmap(run_world_single, args)
 
-        elapsed_time = time.time() - start_time
-        if print_time:
-            print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
-                                               1 / animation_dt), end='')
+    elapsed_time = time.time() - start_time
+    if print_time:
+        print('Simulation time: {}s, CPU time: {}s'.format(int(run_time), int(elapsed_time)))

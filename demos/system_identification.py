@@ -20,11 +20,11 @@ from lcp_physics.physics.world import World, run_world
 from lcp_physics.physics.action import build_mesh, random_action
 
 
-TIME = 4
+TIME = 2
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-hand_radius = 30
+hand_radius = 20
 particle_radius = 10
 
 np.random.seed(1)
@@ -192,7 +192,7 @@ def sys_id_demo(screen):
         data_gen.mass_profile = Variable(data_gen.mass_profile.data - learning_rate * grad, 
                                         requires_grad=True)
         # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
-        learning_rate *= 0.9
+        learning_rate *= 0.99
         print(i, '/', max_iter, dist.data.item())
         
         print('=======\n\n')
