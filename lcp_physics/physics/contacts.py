@@ -1,7 +1,5 @@
 import random
-
 import ode
-
 import torch
 
 from .bodies import Circle

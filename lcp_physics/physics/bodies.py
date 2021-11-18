@@ -146,16 +146,21 @@ class Circle(Body):
     def draw(self, screen, pixels_per_meter=1, show_mass=True):
         center = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         rad = int(self.rad.item() * pixels_per_meter)
-        # if show_mass:
-            
+        if show_mass:
+            thickness = 0
+            col = (max(0, min(255, int(self.mass.item() * 1e3))), 
+                   0, 0)
+        else:
+            thickness = self.thickness
+            col = (255, 0, 0)
+
         # draw radius to visualize orientation
         r = pygame.draw.line(screen, (0, 0, 255), center,
                              center + [math.cos(self.rot.item()) * rad,
                                        math.sin(self.rot.item()) * rad],
                              self.thickness)
         # draw circle
-        c = pygame.draw.circle(screen, self.col, center,
-                               rad, self.thickness)
+        c = pygame.draw.circle(screen, col, center, rad, thickness)
         return [c, r]
 
 

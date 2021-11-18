@@ -29,7 +29,7 @@ class Defaults:
     DT = 1.0 / FPS
 
     ENGINE = 'PdipmEngine'
-    CONTACT = 'DiffContactHandler'
+    CONTACT = 'OdeContactHandler'
 
     # Tensor defaults
     # DTYPE = torch.double

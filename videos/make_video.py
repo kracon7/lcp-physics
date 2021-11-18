@@ -15,7 +15,7 @@ def main():
     img_dir = args.img_dir
     img_list = os.listdir(img_dir)
     img_list.sort()
-    out = cv2.VideoWriter(args.output_path, cv2.VideoWriter_fourcc(*'XVID'), 30, frameSize)
+    out = cv2.VideoWriter(args.output_path, cv2.VideoWriter_fourcc(*'XVID'), 10, frameSize)
 
     for i in range(len(img_list)):
         filename = os.path.join(img_dir, img_list[i])

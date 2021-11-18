@@ -13,7 +13,7 @@ from torch.autograd import Variable
 from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
-from lcp_physics.physics.utils import Defaults, Recorder
+from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder
 from lcp_physics.physics.world import World, run_world
 
 
@@ -21,10 +21,7 @@ TIME = 5
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 
-def make_world(radius):
-    '''
-    build world based on particle positions
-    '''
+def make_world_1(radius):
     bodies = []
     joints = []
     mu_s = 0.1
@@ -50,11 +47,9 @@ def make_world(radius):
     return world
     
 
-def fixed_joint_demo(screen):
+def friction_collision_demo(screen, recorder):
     radius = 30
-    world = make_world(radius)
-    recorder = None
-    # recorder = Recorder(DT, screen)
+    world = make_world_1(radius)
     
     if screen is not None:
         import pygame
@@ -134,6 +129,7 @@ def fixed_joint_demo(screen):
     plt.show()
 
 
+
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':
         # Run without displaying
@@ -144,5 +140,10 @@ if __name__ == '__main__':
         screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF)
         screen.set_alpha(None)
         pygame.display.set_caption('2D Engine')
+        reset_screen(screen)
 
-    fixed_joint_demo(screen)
+    recorder = None
+    # recorder = Recorder(DT, screen)
+
+    friction_collision_demo(screen, recorder)
+
