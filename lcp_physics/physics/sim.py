@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from .bodies import Circle, Rect, Hull, Composite
 from .constraints import TotalConstraint, FixedJoint
 from .forces import ExternalForce, Gravity, vert_impulse, hor_impulse
-from .utils import Defaults, plot, Recorder, rgb2mass, mass2rgb
+from .utils import Defaults, plot, Recorder, rgb2mass, mass2rgb, get_tensor
 from .world import World, run_world
 from .action import build_mesh, random_action
 
@@ -47,12 +47,12 @@ class SimSingle():
         self.particle_pos0 = particle_pos0
         self.particle_radius = particle_radius
         self.N = self.particle_pos0.shape[0]
-        self.device = DEVICE
+        self.DEVICE = DEVICE
 
         if mass_gt is None:
             self.mass_gt = 0.01 * torch.ones(self.N).to(DEVICE)
         else:
-            self.mass_gt = mass_gt
+            self.mass_gt = get_tensor(mass_gt)
 
         if bottom_fric_gt is None:
             self.bottom_fric_gt = torch.FloatTensor([0.001, 0.1]).repeat(self.N, 1).to(DEVICE)
@@ -62,7 +62,7 @@ class SimSingle():
         if mass_est is None:
             self.mass_est = 0.01 * torch.ones(self.N).to(DEVICE)
         else:
-            self.mass_est = mass_est
+            self.mass_est = get_tensor(mass_est)
         self.mass_est = Variable(self.mass_est, requires_grad=True)
 
         if bottom_fric_est is None:
@@ -119,7 +119,7 @@ class SimSingle():
 
         # init force and apply force
         f = 2 * action[1]
-        initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.device)
+        initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
         push_force = lambda t: initial_force if t < 0.3 else ExternalForce.ZEROS
         c1.add_force(ExternalForce(push_force))
         
@@ -128,7 +128,7 @@ class SimSingle():
 
         return world
 
-    def run_episode(self, action):
+    def run_episode_random(self, time=10, screen=None, recorder=None):
         rotation, offset = self.random_rest_composite_pose()
         # init composite object with offset and rotation
         composite_body_gt = self.init_composite_object(
@@ -138,24 +138,23 @@ class SimSingle():
                                     self.bottom_fric_gt,
                                     rotation=rotation,
                                     offset=offset)
-        if action is None:
-            action = self.sample_action(composite_body_gt)
+        action = self.sample_action(composite_body_gt)
         world = self.make_world(composite_body_gt, action)
         recorder = None
         # recorder = Recorder(DT, screen)
-        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        run_world(world, run_time=time, screen=screen, recorder=recorder)
 
         X1 = composite_body_gt.get_particle_pos()
         
         composite_body = self.init_composite_object(
                                     self.particle_pos0,
                                     self.particle_radius, 
-                                    self.mass,
+                                    self.mass_est,
                                     self.bottom_fric_gt,
                                     rotation=rotation,
                                     offset=offset)
         world = self.make_world(composite_body, action)
-        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        run_world(world, run_time=time, screen=screen, recorder=recorder)
 
         X2 = composite_body.get_particle_pos()
 
