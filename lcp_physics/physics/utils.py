@@ -151,3 +151,17 @@ def get_instance(mod, class_id):
     else:
         # Else just instantiate
         return class_id()
+
+def mass2rgb(mass):
+
+    rgb = np.stack([(1e3*mass).astype('int'), 
+                    np.zeros_like(mass, dtype='int'),
+                    np.zeros_like(mass, dtype='int')], axis=-1)
+    return rgb
+
+def rgb2mass(rgb):
+
+    mass = rgb[...,0].astype('float') / 1e3
+
+    return mass
+

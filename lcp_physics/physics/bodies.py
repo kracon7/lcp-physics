@@ -143,9 +143,11 @@ class Circle(Body):
     def set_p(self, new_p, update_geom_rotation=False):
         super().set_p(new_p, update_geom_rotation=update_geom_rotation)
 
-    def draw(self, screen, pixels_per_meter=1):
+    def draw(self, screen, pixels_per_meter=1, show_mass=True):
         center = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         rad = int(self.rad.item() * pixels_per_meter)
+        # if show_mass:
+            
         # draw radius to visualize orientation
         r = pygame.draw.line(screen, (0, 0, 255), center,
                              center + [math.cos(self.rot.item()) * rad,

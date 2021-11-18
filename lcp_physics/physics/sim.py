@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from .bodies import Circle, Rect, Hull, Composite
 from .constraints import TotalConstraint, FixedJoint
 from .forces import ExternalForce, Gravity, vert_impulse, hor_impulse
-from .utils import Defaults, plot,    Recorder
+from .utils import Defaults, plot, Recorder, rgb2mass, mass2rgb
 from .world import World, run_world
 from .action import build_mesh, random_action
 
@@ -30,7 +30,7 @@ def image_to_pos(mass_img, particle_radius):
 
 def image_to_mass(mass_img, mask):
     img = cv2.imread(mass_img)
-    mass_profile = img[:,:,0][mask].astype('float') / 1e3
+    mass_profile = rgb2mass(img)[mask]
     return mass_profile
 
 def image_to_bottom_fric(fric_img, mask):
