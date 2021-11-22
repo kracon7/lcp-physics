@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
+from lcp_physics.physics.bodies import Circle, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, Recorder

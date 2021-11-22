@@ -6,7 +6,7 @@ import time
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect
+from lcp_physics.physics.bodies import Circle
 from lcp_physics.physics.constraints import Joint
 from lcp_physics.physics.forces import ExternalForce, down_force
 from lcp_physics.physics.world import World, run_world
@@ -105,65 +105,6 @@ def make_world(learned_force):
 
     world = World(bodies, joints, dt=DT, extend=1)
     return world, c2, target
-
-
-# def make_world(learned_force):
-#     bodies = []
-#     joints = []
-#
-#     # c = Circle([100, 259], 30)
-#     # bodies.append(c)
-#     # c.add_force(ExternalForce(learned_force))
-#     # c.add_force(ExternalForce(multiplier=10))
-#     c = Rect([100, 100], (60, 60))
-#     bodies.append(c)
-#     c.add_force(ExternalForce(learned_force))
-#     # c.add_force(ExternalForce(multiplier=10))
-#
-#     target = Circle([500, 259], 30)
-#     bodies.append(target)
-#     target.add_no_collision(c)
-#
-#     r = Rect([500, 300], [1000, 20])
-#     r.v[0] = math.pi / 32
-#     r.move(1)
-#     r.v[0] = 0.
-#     bodies.append(r)
-#     joints.append(Joint(r, None, [50, 275]))
-#     joints.append(Joint(r, None, [950, 325]))
-#     # r = Rect([300, 100], [25, 500], mass=10000)
-#     # bodies.append(r)
-#
-#     world = World(bodies, joints, dt=DT)
-#     return world, c, target
-
-
-# def make_world(learned_force):
-#     bodies = []
-#     joints = []
-#
-#     # c = Circle([100, 259], 30)
-#     # bodies.append(c)
-#     # c.add_force(ExternalForce(learned_force))
-#     # c.add_force(ExternalForce(multiplier=10))
-#     c = Rect([100, 259], (60, 60))
-#     bodies.append(c)
-#     c.add_force(ExternalForce(learned_force))
-#     c.add_force(ExternalForce(multiplier=1))
-#
-#     target = Circle([500, 259], 30)
-#     bodies.append(target)
-#     target.add_no_collision(c)
-#
-#     r = Rect([500, 300], [1000, 20])
-#     bodies.append(r)
-#     joints.append(Joint(r, None, [50, 275]))
-#     joints.append(Joint(r, None, [950, 325]))
-#     # r = Rect([300, 100], [25, 500], mass=10000)
-#     # bodies.append(r)
-#
-#     world = World(bodies, joints, dt=DT)
-#     return world, c, target
 
 
 if __name__ == '__main__':

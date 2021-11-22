@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
+from lcp_physics.physics.bodies import Circle, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, Recorder
@@ -34,11 +34,6 @@ def make_world(particle_pos, particle_radius, hand):
 
     c = Circle(hand, 60)
     bodies.append(c)
-
-    inclination = math.pi * 17/ 32
-    r = Rect([inclination, 900, 450], [400, 10])
-    bodies.append(r)
-    joints.append(TotalConstraint(r))
 
     initial_force = torch.FloatTensor([0, 0.5, 0]).to(DEVICE)
     initial_force = Variable(initial_force, requires_grad=True)

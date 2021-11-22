@@ -12,7 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import torch
 from torch.autograd import Variable
 
-from .bodies import Circle, Rect, Hull, Composite
+from .bodies import Circle, Composite
 from .constraints import TotalConstraint, FixedJoint
 from .forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from .utils import Defaults, plot, Recorder, rgb2mass, mass2rgb, get_tensor

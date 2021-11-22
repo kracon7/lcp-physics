@@ -37,11 +37,23 @@ class World:
         self.bodies = bodies
         self.vec_len = len(self.bodies[0].v)
 
-        # XXX Using ODE for broadphase for now
-        self.space = ode.HashSpace()
+        # indexing bodies and create contact check list
         for i, b in enumerate(bodies):
-            b.geom.body = i
-            self.space.add(b.geom)
+            b.geom.idx = i
+        no_contact_list = []
+        for b in bodies:
+            no_contact_list.append([geom.idx for geom in b.geom.no_contact])
+        contact_check_list = []
+        for i in range(len(bodies)):
+            contact_check_list.append([j for j in range(len(bodies)) 
+                                    if i != j and j not in no_contact_list[i]])
+        self.contact_check_list = contact_check_list
+
+        # # XXX Using ODE for broadphase for now
+        # self.space = ode.HashSpace()
+        # for i, b in enumerate(bodies):
+        #     b.geom.body = i
+        #     self.space.add(b.geom)
 
         self.static_inverse = True
         self.num_constraints = 0
@@ -130,6 +142,12 @@ class World:
         for i, b in enumerate(self.bodies):
             b.v = self.v[i * len(b.v):(i + 1) * len(b.v)]
 
+    def get_p(self):
+        result = []
+        for b in self.bodies:
+            result.append(b.p)
+        return torch.stack(result)
+
     def set_p(self, new_p):
         for i, b in enumerate(self.bodies):
             b.set_p(new_p[i * self.vec_len:(i + 1) * self.vec_len])
@@ -139,8 +157,13 @@ class World:
 
     def find_contacts(self):
         self.contacts = []
-        # ODE contact detection
-        self.space.collide([self], self.contact_callback)
+        # # ODE contact detection
+        # self.space.collide([self], self.contact_callback)
+
+        position = self.get_p().detach().cpu().numpy()
+        for i, b in enumerate(self.bodies):
+            
+
 
     def restitutions(self):
         restitutions = self._M.new_empty(len(self.contacts))
