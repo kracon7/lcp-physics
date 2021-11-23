@@ -91,9 +91,9 @@ class Body(object):
     def _get_ang_inertia(self, mass):
         raise NotImplementedError
 
-    def move(self, dt, update_geom_rotation=True):
+    def move(self, dt):
         new_p = self.p + self.v * dt
-        self.set_p(new_p, update_geom_rotation)
+        self.set_p(new_p)
 
     def set_p(self, new_p):
         self.p = new_p
@@ -101,7 +101,7 @@ class Body(object):
         self.rot = self.p[0:1]
         self.pos = self.p[1:]
 
-        self.geom.setPosition([self.pos[0], self.pos[1], 0.0])
+        self.geom.setPosition(self.pos)
 
     def apply_forces(self, t):
         if len(self.forces) == 0:
@@ -140,11 +140,11 @@ class Circle(Body):
                                          self.pos.new_zeros(1)]))
         self.geom.no_contact = set()
 
-    def move(self, dt, update_geom_rotation=False):
-        super().move(dt, update_geom_rotation=update_geom_rotation)
+    def move(self, dt):
+        super().move(dt)
 
-    def set_p(self, new_p, update_geom_rotation=False):
-        super().set_p(new_p, update_geom_rotation=update_geom_rotation)
+    def set_p(self, new_p):
+        super().set_p(new_p)
 
     def draw(self, screen, pixels_per_meter=1, show_mass=True):
         center = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)

@@ -43,11 +43,13 @@ class World:
         no_contact_list = []
         for b in bodies:
             no_contact_list.append([geom.idx for geom in b.geom.no_contact])
-        contact_check_list = []
+        contact_checklist = []
         for i in range(len(bodies)):
-            contact_check_list.append([j for j in range(len(bodies)) 
-                                    if i != j and j not in no_contact_list[i]])
-        self.contact_check_list = contact_check_list
+            for j in range(len(bodies)):
+                if i != j and j not in no_contact_list[i] and \
+                    [i, j] not in contact_checklist and [j, i] not in contact_checklist:
+                    contact_checklist.append([i, j])
+        self.contact_checklist = contact_checklist
 
         # # XXX Using ODE for broadphase for now
         # self.space = ode.HashSpace()
@@ -157,13 +159,20 @@ class World:
 
     def find_contacts(self):
         self.contacts = []
-        # # ODE contact detection
-        # self.space.collide([self], self.contact_callback)
 
-        position = self.get_p().detach().cpu().numpy()
-        for i, b in enumerate(self.bodies):
-            
-
+        for pair in self.contact_checklist:
+            i1, i2 = pair
+            b1, b2 = self.bodies[i1], self.bodies[i2]
+            r = b1.rad + b2.rad
+            normal = b1.pos - b2.pos
+            dist = normal.norm()
+            penetration = r - dist
+            if penetration.item() > -self.eps:
+                normal = normal / dist
+                p1 = -normal * (b1.rad - penetration / 2)
+                p2 = normal * (b2.rad - penetration / 2)
+                pts = (normal, p1, p2, penetration)
+                self.contacts.append((pts, i1, i2))
 
     def restitutions(self):
         restitutions = self._M.new_empty(len(self.contacts))
