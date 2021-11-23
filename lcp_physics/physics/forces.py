@@ -36,16 +36,22 @@ class ExternalForce:
     ROT = get_tensor([1, 0, 0])
     ZEROS = get_tensor([0, 0, 0])
 
-    def __init__(self, force_vec=None, multiplier=100.):
-        self.fo
+    def __init__(self, force_vec=None, tlim=1, multiplier=100.):
+        self.force_vec = force_vec
         self.multiplier = multiplier
-        self.force = lambda t: force_func(t) * self.multiplier
+        self.tlim = tlim
         self.body = None
 
     def set_body(self, body):
         self.body = body
         # match body's tensor type and device
         self.multiplier = get_tensor(self.multiplier, base_tensor=body._base_tensor)
+
+    def force(self, t):
+        if t < self.tlim:
+            return self.multiplier * self.force_vec
+        else:
+            return ExternalForce.ZEROS
 
 
 # class ExternalForce:

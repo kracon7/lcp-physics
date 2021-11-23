@@ -120,8 +120,7 @@ class SimSingle():
         # init force and apply force
         f = 2 * action[1]
         initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
-        push_force = lambda t: initial_force if t < 0.3 else ExternalForce.ZEROS
-        c1.add_force(ExternalForce(push_force))
+        c1.add_force(ExternalForce(initial_force, 0.3))
         
         # init world
         world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)

@@ -42,8 +42,7 @@ def make_world_2(rod_mass, rod_fric, action):
     # init force and apply force
     f = 5 * action[1]
     initial_force = torch.FloatTensor([0, f[0], f[1]]).to(DEVICE)
-    push_force = lambda t: initial_force if t < 0.5 else ExternalForce.ZEROS
-    c1.add_force(ExternalForce(push_force))
+    c1.add_force(ExternalForce(initial_force, 0.5))
     
     # init world
     world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)

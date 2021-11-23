@@ -115,7 +115,7 @@ def sys_id_demo():
     action = sim.sample_action(composite_body)
     world = sim.make_world(composite_body, action)
 
-    world_after = run_world_batch([world], run_time=5)
+    world_after = run_world_batch([world, world], run_time=5)
 
     
     # learning_rate = 0.001
