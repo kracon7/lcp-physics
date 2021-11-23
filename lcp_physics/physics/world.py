@@ -1,5 +1,8 @@
 import time
-from multiprocessing import Pool
+# from multiprocessing import Pool
+import torch
+from torch.multiprocessing import Pool
+torch.multiprocessing.set_sharing_strategy("file_system")
 
 import ode
 import torch

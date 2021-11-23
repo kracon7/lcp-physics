@@ -25,27 +25,43 @@ def rot_impulse(t):
     else:
         return ExternalForce.ZEROS
 
-
 class ExternalForce:
     """Generic external force to be added to objects.
        Takes in a force_function which returns a force vector as a function of time,
        and a multiplier that multiplies such vector.
     """
-    # Pre-store basic forces
-    DOWN = get_tensor([0, 0, 1])
-    RIGHT = get_tensor([0, 1, 0])
-    ROT = get_tensor([1, 0, 0])
-    ZEROS = get_tensor([0, 0, 0])
 
-    def __init__(self, force_func=down_force, multiplier=100.):
+    def __init__(self, force_vec=None, multiplier=100.):
+        self.force_vec = force_vec
         self.multiplier = multiplier
-        self.force = lambda t: force_func(t) * self.multiplier
         self.body = None
 
     def set_body(self, body):
         self.body = body
         # match body's tensor type and device
         self.multiplier = get_tensor(self.multiplier, base_tensor=body._base_tensor)
+
+
+# class ExternalForce:
+#     """Generic external force to be added to objects.
+#        Takes in a force_function which returns a force vector as a function of time,
+#        and a multiplier that multiplies such vector.
+#     """
+#     # Pre-store basic forces
+#     DOWN = get_tensor([0, 0, 1])
+#     RIGHT = get_tensor([0, 1, 0])
+#     ROT = get_tensor([1, 0, 0])
+#     ZEROS = get_tensor([0, 0, 0])
+
+#     def __init__(self, force_func=down_force, multiplier=100.):
+#         self.multiplier = multiplier
+#         self.force = lambda t: force_func(t) * self.multiplier
+#         self.body = None
+
+#     def set_body(self, body):
+#         self.body = body
+#         # match body's tensor type and device
+#         self.multiplier = get_tensor(self.multiplier, base_tensor=body._base_tensor)
 
 
 class Gravity(ExternalForce):
