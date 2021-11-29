@@ -254,7 +254,7 @@ def compute_polygon_normal(smooth_polygon, smooth_points, num_ave=3):
     # line fit the points on both sides to get the normal direction
     normals = []
     expand_edges = np.concatenate([smooth_polygon, smooth_polygon[:num_ave]])
-    print(num_vertices, expand_edges.shape)
+    # print(num_vertices, expand_edges.shape)
     for i in range(num_vertices):
         # find the point coordinates to perform the line fit
         vt_idx = [j for j in range(i-num_ave, i+num_ave+1)]

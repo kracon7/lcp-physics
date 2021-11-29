@@ -316,7 +316,7 @@ class World:
 
 
 def run_world(world, animation_dt=None, run_time=10, print_time=True,
-              screen=None, recorder=None, pixels_per_meter=1):
+              screen=None, recorder=None, pixels_per_meter=1, show_mass=False):
     """Helper function to run a simulation forward once a world is created.
     """
     # If in batched mode don't display simulation
@@ -349,7 +349,8 @@ def run_world(world, animation_dt=None, run_time=10, print_time=True,
                 screen.blit(background, (0, 0))
                 update_list = []
                 for body in world.bodies:
-                    update_list += body.draw(screen, pixels_per_meter=pixels_per_meter)
+                    update_list += body.draw(screen, pixels_per_meter=pixels_per_meter, 
+                                            show_mass=show_mass)
                 for joint in world.joints:
                     update_list += joint[0].draw(screen, pixels_per_meter=pixels_per_meter)
 
