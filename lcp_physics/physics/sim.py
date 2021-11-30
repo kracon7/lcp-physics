@@ -60,7 +60,7 @@ class SimSingle():
             self.bottom_fric_gt = bottom_fric_gt
 
         if mass_est is None:
-            self.mass_est = 0.01 * torch.ones(self.N).to(DEVICE)
+            self.mass_est = 0.03 * torch.ones(self.N).to(DEVICE)
         else:
             self.mass_est = get_tensor(mass_est)
         self.mass_est = Variable(self.mass_est, requires_grad=True)
@@ -84,10 +84,10 @@ class SimSingle():
         return cls(particle_pos0, particle_radius, hand_radius, mass_gt=mass_gt, 
                     bottom_fric_gt=bottom_fric_gt, mask=mask)    
 
-    def random_rest_composite_pose(self):
+    def random_rest_composite_pose(self, batch_size=1):
         # randomly initialize rotation and offset
-        rotation = np.random.uniform() * 2* math.pi
-        offset = np.random.uniform(low=[450, 250], high=[550, 350], size=2)
+        rotation = np.random.uniform(size=batch_size) * 2* math.pi
+        offset = np.random.uniform(low=[450, 250], high=[550, 350], size=(batch_size, 2))
         return rotation, offset
 
     def sample_action(self, composite_body):
@@ -99,8 +99,8 @@ class SimSingle():
 
     def init_composite_object(self, particle_pos, particle_radius, mass_profile, 
                     bottom_fric_profile, rotation=0, offset=[0,0]):
-        rotation_matrix = np.array([[cos(rotation), -sin(rotation)],
-                                    [sin(rotation), cos(rotation)]])
+        rotation_matrix = np.array([[np.cos(rotation), -np.sin(rotation)],
+                                    [np.sin(rotation),  np.cos(rotation)]])
         particle_pos = particle_pos @ rotation_matrix.T + np.array(offset)
 
         composite_body = Composite(particle_pos, particle_radius, mass=mass_profile, 
@@ -135,8 +135,8 @@ class SimSingle():
                                     self.particle_radius, 
                                     self.mass_gt,
                                     self.bottom_fric_gt,
-                                    rotation=rotation,
-                                    offset=offset)
+                                    rotation=rotation[0],
+                                    offset=offset[0])
         action = self.sample_action(composite_body_gt)
         world = self.make_world(composite_body_gt, action)
         recorder = None
@@ -150,8 +150,8 @@ class SimSingle():
                                     self.particle_radius, 
                                     self.mass_est,
                                     self.bottom_fric_gt,
-                                    rotation=rotation,
-                                    offset=offset)
+                                    rotation=rotation[0],
+                                    offset=offset[0])
         world = self.make_world(composite_body, action)
         run_world(world, run_time=time, screen=screen, recorder=recorder)
 

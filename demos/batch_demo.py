@@ -108,7 +108,7 @@ def sys_id_demo():
     composite_body = sim.init_composite_object(
                                     sim.particle_pos0,
                                     sim.particle_radius, 
-                                    sim.mass_gt,
+                                    sim.mass_est,
                                     sim.bottom_fric_gt,
                                     rotation=rotation,
                                     offset=offset)
