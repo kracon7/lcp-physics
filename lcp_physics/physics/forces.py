@@ -37,7 +37,7 @@ class ExternalForce:
     ZEROS = get_tensor([0, 0, 0])
 
     def __init__(self, force_vec=None, tlim=1, multiplier=100.):
-        self.force_vec = force_vec
+        self.force_vec = get_tensor(force_vec)
         self.multiplier = multiplier
         self.tlim = tlim
         self.body = None
