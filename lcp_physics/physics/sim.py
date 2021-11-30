@@ -60,7 +60,7 @@ class SimSingle():
             self.bottom_fric_gt = bottom_fric_gt
 
         if mass_est is None:
-            self.mass_est = 0.01 * torch.ones(self.N).to(DEVICE)
+            self.mass_est = 0.05 * torch.ones(self.N).to(DEVICE)
         else:
             self.mass_est = get_tensor(mass_est)
         self.mass_est = Variable(self.mass_est, requires_grad=True)
