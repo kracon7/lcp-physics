@@ -15,7 +15,7 @@ from torch.autograd import Variable
 from lcp_physics.physics.bodies import Circle, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
-from lcp_physics.physics.utils import Defaults, plot,  Recorder
+from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder
 from lcp_physics.physics.world import World, run_world, run_world_batch, run_world_single
 from lcp_physics.physics.action import build_mesh, random_action
 from lcp_physics.physics.sim import SimSingle
@@ -29,52 +29,6 @@ hand_radius = 30
 particle_radius = 10
 
 np.random.seed(1)
-
-class DataGen():
-    def __init__(self):
-        self.particle_pos0, self.mask = image_to_pos(mass_img_path)
-    
-        self.mass_profile_gt = image_to_mass(mass_img_path, self.mask)
-        self.bottom_fric_profile_gt = image_to_bottom_fric(bottom_fric_img_path, self.mask)
-    
-        self.N = self.particle_pos0.shape[0]
-    
-        self.mass_profile = 0.02 * torch.ones(self.N).to(DEVICE)
-        self.mass_profile = Variable(self.mass_profile, requires_grad=True)
-        self.bottom_fric_profile = torch.FloatTensor([0.001, 0.1]).repeat(self.N, 1).to(DEVICE)
-    
-        self.particle_radius = 10
-        self.hand_radius = 30
-
-    def run_episode(self):
-        rotation, offset = self.reset_composite_pose()
-        # init composite object with offset and rotation
-        composite_body_gt = init_composite_object(self.particle_pos0,
-                                               self.particle_radius, 
-                                               self.mass_profile_gt,
-                                               self.bottom_fric_profile_gt,
-                                               rotation=rotation,
-                                               offset=offset)
-        action = self.sample_action(composite_body_gt)
-        world = make_world(self.particle_pos0, composite_body_gt, action)
-        recorder = None
-        # recorder = Recorder(DT, screen)
-        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-
-        X1 = composite_body_gt.get_particle_pos()
-        
-        composite_body = init_composite_object(self.particle_pos0,
-                                               self.particle_radius, 
-                                               self.mass_profile,
-                                               self.bottom_fric_profile_gt,
-                                               rotation=rotation,
-                                               offset=offset)
-        world = make_world(self.particle_pos0, composite_body, action)
-        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-
-        X2 = composite_body.get_particle_pos()
-
-        return rotation, offset, action, X1, X2
 
 def plot_mass_error(mask, m1, m2, save_path=None):
     err = np.zeros_like(mask).astype('float')
@@ -95,17 +49,17 @@ def plot_mass_error(mask, m1, m2, save_path=None):
     plt.clf()
     ax.cla()
 
-def sys_id_demo():
+def sys_id_demo(screen):
     mass_img_path = os.path.join(ROOT, 'fig/hammer_mass.png')
     bottom_fric_img_path = os.path.join(ROOT, 'fig/hammer_fric.png')
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=30)
     learning_rate = 1e-4
-    max_iter = 10
+    max_iter = 100
     dist_hist = []
     mass_err_hist = []
-    batch_size, TIME = 5, 5
+    batch_size, TIME = 2, 2
 
     for k in range(max_iter):
         plot_mass_error(sim.mask, sim.mass_gt, 
@@ -131,8 +85,9 @@ def sys_id_demo():
             composite_body_est = sim.init_composite_object(sim.particle_pos0, sim.particle_radius, 
                         sim.mass_est, sim.bottom_fric_gt, rotation=rotation[i], offset=offset[i])
             world_est = sim.make_world(composite_body_est, A[i])
-            run_world_single(world_est, run_time=TIME)
+            run_world(world_est, run_time=TIME, print_time=True, screen=screen)
             X1.append(composite_body_est.get_particle_pos())
+            reset_screen(screen)
 
         # compute loss
         dist = torch.sum(torch.norm(torch.stack(X0) - torch.stack(X1), dim=-1))
@@ -140,10 +95,8 @@ def sys_id_demo():
         grad = sim.mass_est.grad.data
         print(grad)
         grad.clamp_(1/learning_rate * -2e-3, 1/learning_rate * 2e-3)
-
-        sim.mass_est = Variable(sim.mass_est.data - learning_rate * grad, 
-                                        requires_grad=True)
-        # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
+        sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-5)
+        sim.mass_est.requires_grad=True
         learning_rate *= 0.99
         print(k, '/', max_iter, dist.data.item())
         
@@ -159,5 +112,15 @@ def sys_id_demo():
 
 
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == '-nd':
+        # Run without displaying
+        screen = None
+    else:
+        pygame.init()
+        width, height = 1000, 600
+        screen = pygame.display.set_mode((width, height), pygame.DOUBLEBUF)
+        screen.set_alpha(None)
+        pygame.display.set_caption('2D Engine')
+        reset_screen(screen)
 
-    sys_id_demo()
+    sys_id_demo(screen)
