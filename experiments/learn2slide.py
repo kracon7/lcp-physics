@@ -71,7 +71,7 @@ def main(screen):
                     hand_radius=20)
     
     learning_rate = 1e-4
-    max_iter = 40
+    max_iter = 1
 
     dist_hist = []
     mass_err_hist = []
@@ -100,7 +100,7 @@ def main(screen):
 
         reset_screen(screen)
 
-    plot(dist_hist)
+    # plot(dist_hist)
 
     # ================         PATH PLANNING      ===================
 
@@ -121,7 +121,7 @@ def main(screen):
     batch_size = 5
 
     # init the composite at center, extract particle positions
-    target_pose = target_list[idx]
+    target_pose = target_list[idx].reshape(-1)
     target_particle_pos = sim.transform_particles(target_pose[0], target_pose[1:])
     start_pose = torch.tensor([0, 500, 300]).float()
     start_particle_pos = sim.transform_particles(start_pose[0], start_pose[1:])
@@ -136,20 +136,20 @@ def main(screen):
 
         # compute the pose of the next node
         next_node = curr_pose + \
-                    torch.clamp(target - curr_pose, min=-step_size, max=step_size)
+                    torch.clamp(target_pose - curr_pose, min=-step_size, max=step_size)
 
         # random sampling actions and do forward simulation
         curr_particle_pos = sim.transform_particles(curr_pose[0], curr_pose[1:])
         next_node_particle_pos = sim.transform_particles(next_node[0], next_node[1:])
         C, A, W = [], [], []
         for i in range(batch_size):
-            composite_body = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
+            composite_body_est = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
                         sim.bottom_fric_gt, rotation=curr_pose[0], offset=curr_pose[1:])
-            action = sim.sample_action(composite_body)
-            world_gt = sim.make_world(composite_body_gt, action)
-            C.append(composite_body_gt)
+            action = sim.sample_action(composite_body_est)
+            world_est = sim.make_world(composite_body_est, action)
+            C.append(composite_body_est)
             A.append(action)
-            W.append(world_gt)    
+            W.append(world_est)    
         
         run_world_batch(W, run_time=TIME)
 

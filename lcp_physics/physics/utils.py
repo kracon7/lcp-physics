@@ -188,6 +188,6 @@ def rel_pose(p1, p2):
         (torch.norm(p1, dim=-1) * torch.norm(p2, dim=-1))
     c = torch.bmm(p1.unsqueeze(1), p2.unsqueeze(-1)).reshape(-1) / \
         (torch.norm(p1, dim=-1) * torch.norm(p2, dim=-1))
-    theta = torch.mean(torch.atan2(s, c))
+    theta = torch.mean(torch.atan2(s, c), dim=0, keepdim=True)
 
     return torch.cat([theta, trans])

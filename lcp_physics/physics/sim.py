@@ -26,6 +26,8 @@ def image_to_pos(mass_img, particle_radius):
     x_cord, y_cord = np.where(mask)
     x_cord, y_cord = x_cord - x_cord[0], y_cord - y_cord[0]
     particle_pos = 2 * particle_radius * np.stack([x_cord, y_cord]).T
+    particle_pos = torch.from_numpy(particle_pos).float()
+    mask = torch.from_numpy(mask)
     return particle_pos, mask
 
 def image_to_mass(mass_img, mask):
@@ -86,8 +88,10 @@ class SimSingle():
 
     def random_rest_composite_pose(self, batch_size=1):
         # randomly initialize rotation and offset
-        rotation = np.random.uniform(size=batch_size) * 2* math.pi
-        offset = np.random.uniform(low=[450, 250], high=[550, 350], size=(batch_size, 2))
+        rotation = torch.rand(batch_size) * 2* math.pi
+        offset = torch.cat([torch.FloatTensor(batch_size, 1).uniform_(450, 550),
+                            torch.FloatTensor(batch_size, 1).uniform_(250, 350)], dim=-1)
+        # offset = np.random.uniform(low=[450, 250], high=[550, 350], size=(batch_size, 2))
         return rotation, offset
 
     def sample_action(self, composite_body):
@@ -109,9 +113,9 @@ class SimSingle():
         '''
         Apply rigid body transformation to the composite object and return particle pos
         '''
-        rotation_matrix = np.array([[np.cos(rotation), -np.sin(rotation)],
-                                    [np.sin(rotation),  np.cos(rotation)]])
-        particle_pos = self.particle_pos0 @ rotation_matrix.T + np.array(offset)
+        rotation_matrix = torch.stack([torch.stack([torch.cos(rotation), -torch.sin(rotation)]), 
+                                       torch.stack([torch.sin(rotation),  torch.cos(rotation)])])
+        particle_pos = self.particle_pos0 @ rotation_matrix.t() + offset
         return particle_pos
 
     def make_world(self, composite_body, action):
