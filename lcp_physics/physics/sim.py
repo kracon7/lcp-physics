@@ -97,15 +97,22 @@ class SimSingle():
         action = random_action(p, self.particle_radius, self.hand_radius)
         return action
 
-    def init_composite_object(self, particle_pos, particle_radius, mass_profile, 
+    def init_composite_object(self, particle_radius, mass_profile, 
                     bottom_fric_profile, rotation=0, offset=[0,0]):
-        rotation_matrix = np.array([[np.cos(rotation), -np.sin(rotation)],
-                                    [np.sin(rotation),  np.cos(rotation)]])
-        particle_pos = particle_pos @ rotation_matrix.T + np.array(offset)
+        particle_pos = self.transform_particles(rotation, offset)
 
         composite_body = Composite(particle_pos, particle_radius, mass=mass_profile, 
                                     fric_coeff_b=bottom_fric_profile)
         return composite_body
+
+    def transform_particles(self, rotation=0, offset=[0,0]):
+        '''
+        Apply rigid body transformation to the composite object and return particle pos
+        '''
+        rotation_matrix = np.array([[np.cos(rotation), -np.sin(rotation)],
+                                    [np.sin(rotation),  np.cos(rotation)]])
+        particle_pos = self.particle_pos0 @ rotation_matrix.T + np.array(offset)
+        return particle_pos
 
     def make_world(self, composite_body, action):
         bodies = []
@@ -114,13 +121,13 @@ class SimSingle():
         joints += composite_body.joints
         
         # init hand object
-        c1 = Circle(action[0], self.hand_radius, fric_coeff_b=[0.005, 0.45])
+        c1 = Circle(action[0], self.hand_radius, mass=10, fric_coeff_b=[0.005, 0.45])
         bodies.append(c1)
 
         # init force and apply force
-        f = 2 * action[1]
+        f = 20 * action[1]
         initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
-        c1.add_force(ExternalForce(initial_force, 0.3))
+        c1.add_force(ExternalForce(initial_force, 0.2))
         
         # init world
         world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)
@@ -130,13 +137,11 @@ class SimSingle():
     def run_episode_random(self, time=10, screen=None, recorder=None):
         rotation, offset = self.random_rest_composite_pose()
         # init composite object with offset and rotation
-        composite_body_gt = self.init_composite_object(
-                                    self.particle_pos0,
-                                    self.particle_radius, 
-                                    self.mass_gt,
-                                    self.bottom_fric_gt,
-                                    rotation=rotation[0],
-                                    offset=offset[0])
+        composite_body_gt = self.init_composite_object(self.particle_radius, 
+                                                       self.mass_gt,
+                                                       self.bottom_fric_gt,
+                                                       rotation=rotation[0],
+                                                       offset=offset[0])
         action = self.sample_action(composite_body_gt)
         world = self.make_world(composite_body_gt, action)
         recorder = None
@@ -145,13 +150,11 @@ class SimSingle():
 
         X1 = composite_body_gt.get_particle_pos()
         
-        composite_body = self.init_composite_object(
-                                    self.particle_pos0,
-                                    self.particle_radius, 
-                                    self.mass_est,
-                                    self.bottom_fric_gt,
-                                    rotation=rotation[0],
-                                    offset=offset[0])
+        composite_body = self.init_composite_object(self.particle_radius, 
+                                                    self.mass_est,
+                                                    self.bottom_fric_gt,
+                                                    rotation=rotation[0],
+                                                    offset=offset[0])
         world = self.make_world(composite_body, action)
         run_world(world, run_time=time, screen=screen, recorder=recorder)
 

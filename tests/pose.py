@@ -64,18 +64,14 @@ def sys_id_demo(screen):
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=20)
     
-    composite_body = sim.init_composite_object(
-                                    sim.particle_pos0,
-                                    sim.particle_radius, 
+    composite_body = sim.init_composite_object(sim.particle_radius, 
                                     sim.mass_gt,
                                     sim.bottom_fric_gt,
                                     rotation=0,
                                     offset=[500, 300])
     p1 = composite_body.get_particle_pos()[:10]
     p1 = p1[1:] - p1[0]
-    composite_body = sim.init_composite_object(
-                                    sim.particle_pos0,
-                                    sim.particle_radius, 
+    composite_body = sim.init_composite_object(sim.particle_radius, 
                                     sim.mass_gt,
                                     sim.bottom_fric_gt,
                                     rotation=-2.5,

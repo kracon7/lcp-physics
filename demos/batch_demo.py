@@ -49,8 +49,7 @@ class DataGen():
     def run_episode(self):
         rotation, offset = self.reset_composite_pose()
         # init composite object with offset and rotation
-        composite_body_gt = init_composite_object(self.particle_pos0,
-                                               self.particle_radius, 
+        composite_body_gt = init_composite_object(self.particle_radius, 
                                                self.mass_profile_gt,
                                                self.bottom_fric_profile_gt,
                                                rotation=rotation,
@@ -63,8 +62,7 @@ class DataGen():
 
         X1 = composite_body_gt.get_particle_pos()
         
-        composite_body = init_composite_object(self.particle_pos0,
-                                               self.particle_radius, 
+        composite_body = init_composite_object(self.particle_radius, 
                                                self.mass_profile,
                                                self.bottom_fric_profile_gt,
                                                rotation=rotation,
@@ -105,9 +103,7 @@ def sys_id_demo():
 
     rotation, offset = sim.random_rest_composite_pose()
         # init composite object with offset and rotation
-    composite_body = sim.init_composite_object(
-                                    sim.particle_pos0,
-                                    sim.particle_radius, 
+    composite_body = sim.init_composite_object(sim.particle_radius, 
                                     sim.mass_est,
                                     sim.bottom_fric_gt,
                                     rotation=rotation,

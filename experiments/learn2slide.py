@@ -16,9 +16,9 @@ from torch.autograd import Variable
 from lcp_physics.physics.bodies import Circle, Composite
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
-from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder
-from lcp_physics.physics.world import World, run_world
-from lcp_physics.physics.action import build_mesh, random_action
+from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder, rel_pose
+from lcp_physics.physics.world import World, run_world, run_world_batch
+from lcp_physics.physics.action import random_action
 from lcp_physics.physics.sim import SimSingle
 
 
@@ -30,6 +30,26 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 np.random.seed(1)
 
 
+def plot_mass_error(mask, m1, m2, save_path=None):
+    err = np.zeros_like(mask).astype('float')
+    err[mask] = m1 - m2
+
+    ax = plt.subplot()
+    im = ax.imshow(err, vmin=-0.2, vmax=0.2, cmap='plasma')
+
+    # create an axes on the right side of ax. The width of cax will be 5%
+    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+    divider = make_axes_locatable(ax)
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+
+    plt.colorbar(im, cax=cax)
+    if save_path:
+        plt.savefig(save_path)
+
+    plt.clf()
+    ax.cla()
+
+
 def main(screen):
 
     if screen is not None:
@@ -38,11 +58,11 @@ def main(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-	# ================    SYSTEM IDENTIFICATION   ===================
+    # ================    SYSTEM IDENTIFICATION   ===================
 
-	# select object name
-	object_names = ['hammer', 'driller', 'rod1', 'rod2']
-	obj_name = object_names[1]
+    # select object name
+    object_names = ['hammer', 'driller', 'rod1', 'rod2']
+    obj_name = object_names[0]
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 
@@ -57,7 +77,7 @@ def main(screen):
     mass_err_hist = []
 
     for i in range(max_iter):
-    	# run ground truth and prediction        
+        # run ground truth and prediction        
         rotation, offset, action, X1, X2 = sim.run_episode_random(time=TIME, screen=screen)
 
         plot_mass_error(sim.mask, sim.mass_gt, 
@@ -82,17 +102,60 @@ def main(screen):
 
     plot(dist_hist)
 
-	# ================         PATH PLANNING      ===================
+    # ================         PATH PLANNING      ===================
 
-	# generate target pose
+    # disable gradient
+    sim.mass_est.requires_grad = False
+    sim.bottom_fric_est.requires_grad = False
 
-	# compute path towards the target pose
+    # generate target pose
+    target_list = torch.tensor([[1.9, 300, 100],
+                                [0.3, 700, 300],
+                                [-2.9, 650, 400],
+                                [-1.1, 550, 150],
+                                [2.5, 200, 400]]).float()
+    idx = torch.randint(target_list.shape[0], (1,))
 
-	# random sampling actions and do forward simulation
+    step_size = torch.tensor([0.1, 10, 10]).float()
+    epsilon = 5
+    batch_size = 5
 
-	# select the best action
+    # init the composite at center, extract particle positions
+    target_pose = target_list[idx]
+    target_particle_pos = sim.transform_particles(target_pose[0], target_pose[1:])
+    start_pose = torch.tensor([0, 500, 300]).float()
+    start_particle_pos = sim.transform_particles(start_pose[0], start_pose[1:])
+    curr_particle_pos = start_particle_pos
 
-	# action execution 
+    dist = torch.mean(torch.norm(target_particle_pos - 
+                                 start_particle_pos, dim=1)).item()
+
+    # iterate while distance is larger than epsilon
+    while dist > epsilon:
+        curr_pose = rel_pose(start_particle_pos, curr_particle_pos)
+
+        # compute the pose of the next node
+        next_node = curr_pose + \
+                    torch.clamp(target - curr_pose, min=-step_size, max=step_size)
+
+        # random sampling actions and do forward simulation
+        curr_particle_pos = sim.transform_particles(curr_pose[0], curr_pose[1:])
+        next_node_particle_pos = sim.transform_particles(next_node[0], next_node[1:])
+        C, A, W = [], [], []
+        for i in range(batch_size):
+            composite_body = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
+                        sim.bottom_fric_gt, rotation=curr_pose[0], offset=curr_pose[1:])
+            action = sim.sample_action(composite_body)
+            world_gt = sim.make_world(composite_body_gt, action)
+            C.append(composite_body_gt)
+            A.append(action)
+            W.append(world_gt)    
+        
+        run_world_batch(W, run_time=TIME)
+
+        # select the best action
+
+        # action execution 
 
 
 

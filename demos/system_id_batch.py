@@ -68,8 +68,8 @@ def sys_id_demo(screen):
         rotation, offset = sim.random_rest_composite_pose(batch_size=batch_size)
         C, A, W = [], [], []
         for i in range(batch_size):
-            composite_body_gt = sim.init_composite_object(sim.particle_pos0, sim.particle_radius, 
-                        sim.mass_gt, sim.bottom_fric_gt, rotation=rotation[i], offset=offset[i])
+            composite_body_gt = sim.init_composite_object(sim.particle_radius, sim.mass_gt, 
+                                sim.bottom_fric_gt, rotation=rotation[i], offset=offset[i])
             action = sim.sample_action(composite_body_gt)
             world_gt = sim.make_world(composite_body_gt, action)
             C.append(composite_body_gt)
@@ -82,8 +82,8 @@ def sys_id_demo(screen):
         for i in range(batch_size):
             X0.append(C[i].get_particle_pos())
 
-            composite_body_est = sim.init_composite_object(sim.particle_pos0, sim.particle_radius, 
-                        sim.mass_est, sim.bottom_fric_gt, rotation=rotation[i], offset=offset[i])
+            composite_body_est = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
+                                sim.bottom_fric_gt, rotation=rotation[i], offset=offset[i])
             world_est = sim.make_world(composite_body_est, A[i])
             run_world(world_est, run_time=TIME, print_time=True, screen=screen)
             X1.append(composite_body_est.get_particle_pos())
