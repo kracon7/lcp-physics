@@ -24,7 +24,7 @@ def image_to_pos(mass_img, particle_radius):
     img = cv2.imread(mass_img)
     mask = img[:,:,0] < 255
     x_cord, y_cord = np.where(mask)
-    x_cord, y_cord = x_cord - x_cord.min(), y_cord - y_cord.min()
+    x_cord, y_cord = x_cord - x_cord[0], y_cord - y_cord[0]
     particle_pos = 2 * particle_radius * np.stack([x_cord, y_cord]).T
     return particle_pos, mask
 
