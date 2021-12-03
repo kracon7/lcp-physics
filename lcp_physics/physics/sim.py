@@ -121,13 +121,13 @@ class SimSingle():
         joints += composite_body.joints
         
         # init hand object
-        c1 = Circle(action[0], self.hand_radius, mass=10, fric_coeff_b=[0.005, 0.45])
+        c1 = Circle(action[0], self.hand_radius, mass=10, fric_coeff_b=[0.002, 0.05])
         bodies.append(c1)
 
         # init force and apply force
         f = 20 * action[1]
         initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
-        c1.add_force(ExternalForce(initial_force, 0.2))
+        c1.add_force(ExternalForce(initial_force, 0.1))
         
         # init world
         world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)
