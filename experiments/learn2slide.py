@@ -71,7 +71,7 @@ def main(screen):
                     hand_radius=20)
     
     learning_rate = 1e-4
-    max_iter = 50
+    max_iter = 40
 
     dist_hist = []
     mass_err_hist = []
