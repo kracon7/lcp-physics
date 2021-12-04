@@ -3,6 +3,7 @@ import math
 
 import ode
 import pygame
+import cv2
 import scipy.spatial as spatial
 import numpy as np
 
@@ -238,4 +239,29 @@ class Composite():
             no_contact[i] = neighbors
 
         return no_contact
+
+    def draw(self, show_mass=True, canvas_size=(600, 1000), save_path=None):
+        '''
+        opencv rendering of the particles
+        '''
+        pos = self.get_particle_pos().detach().numpy()
+        mass = self.mass.detach().numpy()
+        radius = self.radius
+
+        canvas = 255 * np.ones((canvas_size[0], canvas_size[1], 3), dtype='uint8')
+
+        for i, p in enumerate(pos):
+            if show_mass:
+                color = (255 - int(mass[i] * 1e3), int(mass[i] * 1e3), 0)
+                thickness = -1
+            else:
+                color = (255, 0, 0)
+                thickness = 1
+            canvas = cv2.circle(canvas, (p[0], p[1]), radius, color, thickness)
+
+        if save_path:
+            cv2.imwrite(save_path, cv2.cvtColor(canvas, cv2.COLOR_BGR2RGB))
+        return canvas
+ 
+
 
