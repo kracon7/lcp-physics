@@ -132,7 +132,7 @@ def main(screen):
 
     # iterate while distance is larger than epsilon
     while dist > epsilon:
-        curr_pose = rel_pose(start_particle_pos, curr_particle_pos)
+        curr_pose = rel_pose(sim.particle_pos0, curr_particle_pos)
 
         # compute the pose of the next node
         next_node = curr_pose + \
@@ -149,11 +149,14 @@ def main(screen):
             world_est = sim.make_world(composite_body_est, action)
             C.append(composite_body_est)
             A.append(action)
-            W.append(world_est)    
-        
-        run_world_batch(W, run_time=TIME)
+            W.append(world_est)   
+            # run_world(world_est, run_time=TIME, screen=screen)
+
+        W = run_world_batch(W, run_time=TIME)
 
         # select the best action
+        for i in range(batch_size):
+            C[i].draw(save_path=os.path.join(ROOT, 'tmp/composite_%d.jpg'%i))
 
         # action execution 
 

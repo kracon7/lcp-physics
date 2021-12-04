@@ -1,31 +1,29 @@
 import torch
 from torch import multiprocessing as mp
+from torch.multiprocessing import Pool
 from torchvision.models import resnet50
 torch.set_num_threads(1)
 
+class C():
+    """docstring for C"""
+    def __init__(self):
+        self.x = torch.tensor(10).float()
+
+
 def main():
-    model = resnet50()
+    args = []
+    for i in range(10):
+        args.append([C(), i])
 
-    copy1 = [p.clone() for p in model.parameters()]
-    copy2 = [p.clone() for p in model.parameters()]
+    with Pool(5) as p:
+        worlds_after = p.starmap(run_worker, args)
 
-    processes = []
-    for rank in range(2):
-        process = mp.Process(target=run_worker, args=(rank,))
-        process.start()
-        processes.append(process)
-
-    for p in processes:
-        p.join()
+    for i in range(len(args)):
+        print(args[i][0].x)
 
 
-def run_worker(rank):
-    print(f'Started Worker {rank}')
-    model = resnet50()
-    print('Does get here')
-    local_copy = [p.clone() for p in model.parameters()]
-    print('And should also get here')
-
+def run_worker(c, i):
+    c.x += i
 
 if __name__ == "__main__":
     main()

@@ -413,3 +413,5 @@ def run_world_batch(worlds, run_time=10, print_time=True):
     elapsed_time = time.time() - start_time
     if print_time:
         print('Batched simulation, Sim time: {}s, CPU time: {}s'.format(int(run_time), int(elapsed_time)))
+
+    return worlds_after
