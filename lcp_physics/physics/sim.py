@@ -123,6 +123,8 @@ class SimSingle():
         joints = []
         bodies += composite_body.bodies
         joints += composite_body.joints
+
+        composite_body.body_id = np.arange(len(composite_body.bodies))
         
         # init hand object
         c1 = Circle(action[0], self.hand_radius, mass=10, fric_coeff_b=[0.002, 0.05])

@@ -155,8 +155,10 @@ def main(screen):
         W = run_world_batch(W, run_time=TIME)
 
         # select the best action
+        body_id = C[0].body_id
         for i in range(batch_size):
-            C[i].draw(save_path=os.path.join(ROOT, 'tmp/composite_%d.jpg'%i))
+            pos = W[i].get_p()[body_id, 1:]
+            C[i].draw(pos, save_path=os.path.join(ROOT, 'tmp/composite_%d.jpg'%i))
 
         # action execution 
 

@@ -240,11 +240,12 @@ class Composite():
 
         return no_contact
 
-    def draw(self, show_mass=True, canvas_size=(600, 1000), save_path=None):
+    def draw(self, pos=None, show_mass=True, canvas_size=(600, 1000), save_path=None):
         '''
         opencv rendering of the particles
         '''
-        pos = self.get_particle_pos().detach().numpy()
+        if pos == None:
+            pos = self.get_particle_pos().detach().numpy()
         mass = self.mass.detach().numpy()
         radius = self.radius
 
