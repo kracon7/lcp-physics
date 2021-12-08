@@ -152,8 +152,11 @@ class Circle(Body):
         rad = int(self.rad.item() * pixels_per_meter)
         if show_mass:
             thickness = 0
-            col = (max(0, min(255, int(self.mass.item() * 1e3))), 
-                   0, 0)
+            # col = (max(0, min(255, int(self.mass.item() * 1e3))), 
+            #        0, 0)
+            col = (max(0, min(255, 255 - int(self.mass.item() * 1e3))), 
+                   max(0, min(255, int(self.mass.item() * 1e3))), 
+                   0)
         else:
             thickness = self.thickness
             col = (255, 0, 0)

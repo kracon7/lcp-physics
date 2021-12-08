@@ -71,7 +71,7 @@ def main(screen):
                     hand_radius=20)
     
     learning_rate = 1e-4
-    max_iter = 1
+    max_iter = 40
 
     dist_hist = []
     mass_err_hist = []
@@ -116,9 +116,9 @@ def main(screen):
                                 [2.5, 200, 400]]).float()
     idx = torch.randint(target_list.shape[0], (1,))
 
-    step_size = torch.tensor([0.1, 10, 10]).float()
+    step_size = torch.tensor([0.1, 20, 20]).float()
     epsilon = 5
-    batch_size = 5
+    batch_size = 10
 
     # init the composite at center, extract particle positions
     target_pose = target_list[idx].reshape(-1)
@@ -130,8 +130,16 @@ def main(screen):
     dist = torch.mean(torch.norm(target_particle_pos - 
                                  start_particle_pos, dim=1)).item()
 
+    # render the start and target image
+    composite_body_gt = sim.init_composite_object(sim.particle_radius, sim.mass_gt, sim.bottom_fric_gt)
+    composite_body_gt.draw(target_particle_pos, save_path=os.path.join(ROOT, 
+                                                            'tmp/target.jpg'))
+    composite_body_gt.draw(curr_particle_pos, save_path=os.path.join(ROOT, 
+                                                            'tmp/start.jpg'))
+
+    step = 0
     # iterate while distance is larger than epsilon
-    while dist > epsilon:
+    while dist > epsilon and step < 50:
         curr_pose = rel_pose(sim.particle_pos0, curr_particle_pos)
 
         # compute the pose of the next node
@@ -149,20 +157,35 @@ def main(screen):
             world_est = sim.make_world(composite_body_est, action)
             C.append(composite_body_est)
             A.append(action)
-            W.append(world_est)   
-            # run_world(world_est, run_time=TIME, screen=screen)
+            W.append(world_est)
 
         W = run_world_batch(W, run_time=TIME)
 
         # select the best action
         body_id = C[0].body_id
+        curr_best = {'error': torch.inf, 'action': None}
         for i in range(batch_size):
             pos = W[i].get_p()[body_id, 1:]
-            C[i].draw(pos, save_path=os.path.join(ROOT, 'tmp/composite_%d.jpg'%i))
+            # C[i].draw(pos, save_path=os.path.join(ROOT, 'tmp/composite_%d.jpg'%i))
+            diff = torch.mean(torch.norm(pos - next_node_particle_pos, dim=-1)).item()
+            if diff < curr_best['error']:
+                curr_best['error'] = diff
+                curr_best['action'] = A[i]
+
+        print('Next node: {}. Error: {}'.format(next_node.tolist(), curr_best['error']))
 
         # action execution 
+        composite_body = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
+                        sim.bottom_fric_gt, rotation=curr_pose[0], offset=curr_pose[1:])
+        world = sim.make_world(composite_body, curr_best['action'])
+        run_world(world, run_time=TIME, screen=screen, show_mass=True)
+        curr_particle_pos = composite_body.get_particle_pos()
 
+        composite_body.draw(curr_particle_pos, save_path=os.path.join(ROOT, 
+                                                            'tmp/rrt_step%d.jpg'%step))
 
+        step += 1
+        reset_screen(screen)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':

@@ -101,8 +101,8 @@ class SimSingle():
         action = random_action(p, self.particle_radius, self.hand_radius)
         return action
 
-    def init_composite_object(self, particle_radius, mass_profile, 
-                    bottom_fric_profile, rotation=0, offset=[0,0]):
+    def init_composite_object(self, particle_radius, mass_profile, bottom_fric_profile, 
+                            rotation=torch.tensor(0.), offset=torch.tensor([0.,0.])):
         particle_pos = self.transform_particles(rotation, offset)
 
         composite_body = Composite(particle_pos, particle_radius, mass=mass_profile, 
