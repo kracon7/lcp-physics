@@ -6,6 +6,7 @@ from scipy.spatial import Delaunay
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit 
 
+
 def random_action(particle_pos, particle_radius, hand_radius):
     '''
     random sample action (starting position and pushing direction) for pushing
@@ -89,11 +90,12 @@ def build_exterior_mesh(points, voxel_size, vis=False):
     new_pts = []
     for pt in points:
         new_pts.append(pt + voxel_size * dirs)
-    points = np.vstack(new_pts)
+    points = np.vstack(new_pts + [points])
 
     # build mesh with octagons vertex
     tri = Delaunay(points)
-    triangles = clean_edges(points, tri.simplices, ub=voxel_size, lb=0.05*voxel_size)
+    triangles = clean_edges(points, tri.simplices, ub=1.2*voxel_size, lb=0.05*voxel_size)
+
     edges, edge_in_tri_idx = find_boundary_edge(triangles)
     polygon = construct_polygon(edges, points, triangles, edge_in_tri_idx)
     smooth_polygon, smooth_points = corner_cutting(polygon, points, 0)
@@ -144,7 +146,7 @@ def clean_edges(points, triangles, ub=0.05, lb=0):
         l1 = np.linalg.norm(p1-p2)
         l2 = np.linalg.norm(p1-p3)
         l3 = np.linalg.norm(p3-p2)
-        if (l1 < ub) & (l2 < ub) & (l3 < ub) & (l1 > lb) & (l2 > lb) & (l3 > lb):
+        if (l1 <= ub) & (l2 <= ub) & (l3 <= ub) & (l1 > lb) & (l2 > lb) & (l3 > lb):
             cleaned.append(t)
             
     cleaned = np.stack(cleaned)
@@ -305,7 +307,7 @@ def corner_cutting(polygon, points, num_iter=2):
     return new_polygon, new_points
 
 
-def compute_polygon_normal(smooth_polygon, smooth_points, num_ave=3):
+def compute_polygon_normal(smooth_polygon, smooth_points, num_ave=2):
     '''
     Compute the normal directions of the vertices on the boundary of a polygon
     Input
@@ -315,20 +317,20 @@ def compute_polygon_normal(smooth_polygon, smooth_points, num_ave=3):
     num_vertices = smooth_points.shape[0]
     
     def line_objective(x, a, b):
-        return a * x + b
+        A = np.array([a, b, 1])
+        return x @ A
     
     # compute the normal direction that is on the same side as exterior vectors
     # line fit the points on both sides to get the normal direction
     normals = []
-    expand_edges = np.concatenate([smooth_polygon, smooth_polygon[:num_ave]])
-    # print(num_vertices, expand_edges.shape)
     for i in range(num_vertices):
         # find the point coordinates to perform the line fit
-        vt_idx = [j for j in range(i-num_ave, i+num_ave+1)]
-        coord = smooth_points[expand_edges[[vt_idx],0]].reshape(-1,2)
-        popt, _ = curve_fit(line_objective, coord[:,0], coord[:,1])
-        a, b = popt
-        norm = np.array([a, -1])
+        vt_idx = [j % num_vertices for j in range(i-num_ave, i+num_ave+1)]
+        coord = smooth_points[smooth_polygon[[vt_idx],0]].reshape(-1,2)
+        coord = np.insert(coord, 2, 1, axis=1)
+        popt, _ = curve_fit(line_objective, coord, np.zeros(coord.shape[0]))
+        a = popt
+        norm = a / np.linalg.norm(a)
         
         # check whether direction points to exterior
         vec = smooth_points[smooth_polygon[i, 1]] - smooth_points[smooth_polygon[i, 0]]
@@ -346,8 +348,9 @@ if __name__ == '__main__':
     import cv2
     ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     img = cv2.imread(os.path.join(ROOT, 'fig/hammer_mass.png'))
-    img = cv2.imread(os.path.join(ROOT, 'fig/rod1_mass.png'))
-    img = cv2.imread(os.path.join(ROOT, 'fig/line.png'))
+    # img = cv2.imread(os.path.join(ROOT, 'fig/rod1_mass.png'))
+    # img = cv2.imread(os.path.join(ROOT, 'fig/line.png'))
+    # img = cv2.imread(os.path.join(ROOT, 'fig/circle_mass.png'))
 
     particle_radius = 10
     mask = img[:,:,0] < 255

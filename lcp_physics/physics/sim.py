@@ -20,6 +20,7 @@ from .world import World, run_world
 from .action import build_mesh, random_action
 
 
+
 def image_to_pos(mass_img, particle_radius):
     img = cv2.imread(mass_img)
     mask = img[:,:,0] < 255
