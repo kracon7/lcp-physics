@@ -20,7 +20,14 @@ def random_action(particle_pos, particle_radius, hand_radius):
     N = polygon.shape[0]
     idx = np.random.choice(N)
     vtx, nml = polygon_coord[idx], normals[idx]
+    # print(nml)
 
+    # # add 15 degree randomness to the normal direction
+    # theta = np.random.uniform(-1/12*np.pi, 1/12*np.pi)
+    # nml = np.array([[np.cos(theta), -np.sin(theta)],
+    #                 [np.sin(theta),  np.cos(theta)]]) @ nml
+    # print(nml)
+    
     start_pos = vtx + hand_radius * nml
 
     while overlap_check(particle_pos, particle_radius, start_pos, hand_radius):

@@ -5,7 +5,6 @@ import time
 import math
 from math import sin, cos
 import cv2
-import pickle
 import random
 import pygame
 import numpy as np
@@ -59,8 +58,6 @@ def main(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    rec = None
-
     # ================    SYSTEM IDENTIFICATION   ===================
 
     # select object name
@@ -74,7 +71,7 @@ def main(screen):
                     hand_radius=20)
     
     learning_rate = 1e-4
-    max_iter = 1
+    max_iter = 40
 
     dist_hist = []
     mass_err_hist = []
@@ -141,7 +138,6 @@ def main(screen):
                                                             'tmp/start.jpg'))
 
     step = 0
-    action_hist = []
     # iterate while distance is larger than epsilon
     while dist > epsilon and step < 50:
         curr_pose = rel_pose(sim.particle_pos0, curr_particle_pos)
@@ -176,29 +172,20 @@ def main(screen):
                 curr_best['error'] = diff
                 curr_best['action'] = A[i]
 
-        print('\nNext node: {}. Error to next node: {}. Error to target: {} \n====='.format(
-                    next_node.tolist(), curr_best['error'], dist))
+        print('Next node: {}. Error: {}'.format(next_node.tolist(), curr_best['error']))
 
-        action_hist.append(curr_best['action'])
         # action execution 
         composite_body = sim.init_composite_object(sim.particle_radius, sim.mass_est, 
                         sim.bottom_fric_gt, rotation=curr_pose[0], offset=curr_pose[1:])
         world = sim.make_world(composite_body, curr_best['action'])
-        rec = Recorder(DT, screen, path=os.path.join(ROOT, 'tmp/rrt_step%d'%step))
-        run_world(world, run_time=TIME, screen=screen, recorder=rec, show_mass=True)
+        run_world(world, run_time=TIME, screen=screen, show_mass=True)
         curr_particle_pos = composite_body.get_particle_pos()
 
         composite_body.draw(curr_particle_pos, save_path=os.path.join(ROOT, 
                                                             'tmp/rrt_step%d.jpg'%step))
-        dist = torch.mean(torch.norm(target_particle_pos - 
-                                 curr_particle_pos, dim=1)).item()
 
         step += 1
         reset_screen(screen)
-
-    result = {'mass_est': sim.mass_est.detach(), 'actions': action_hist}
-    pickle.dump(result, open('temp.pkl', 'wb'))
-
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':

@@ -76,6 +76,8 @@ class SimSingle():
 
         self.hand_radius = hand_radius
         self.mask = mask
+        self.action_mag = 20
+        self.force_time = 0.1
 
     @classmethod
     def from_img(cls, mass_img_path, bottom_fric_img_path, particle_radius=None, 
@@ -132,9 +134,9 @@ class SimSingle():
         bodies.append(c1)
 
         # init force and apply force
-        f = 20 * action[1]
+        f = self.action_mag * action[1]
         initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
-        c1.add_force(ExternalForce(initial_force, 0.1))
+        c1.add_force(ExternalForce(initial_force, self.force_time))
         
         # init world
         world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)

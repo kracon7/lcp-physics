@@ -28,12 +28,35 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 np.random.seed(1)
 
+
+def plot_mass_stat(mask, gt, est, save_path=None):
+    I0, I1 = np.zeros_like(mask).astype('float'), \
+                 np.zeros_like(mask).astype('float')
+    I0[mask], I1[mask] = gt.numpy(), \
+                                   est.detach().cpu().numpy()
+
+    fig, ax = plt.subplots(1,2)
+    im0 = ax[0].imshow(I0, vmin=0, vmax=0.3, cmap='plasma')
+    im1 = ax[1].imshow(I1, vmin=0, vmax=0.3, cmap='plasma')
+
+    # create an axes on the right side of ax. The width of cax will be 5%
+    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
+    divider = make_axes_locatable(ax[1])
+    cax = divider.append_axes("right", size="5%", pad=0.05)
+
+    plt.colorbar(im1, cax=cax)
+    if save_path:
+        plt.savefig(save_path)
+
+    plt.close()
+
+
 def plot_mass_error(mask, m1, m2, save_path=None):
     err = np.zeros_like(mask).astype('float')
     err[mask] = m1 - m2
 
     ax = plt.subplot()
-    im = ax.imshow(err, vmin=-0.1, vmax=0.1, cmap='plasma')
+    im = ax.imshow(err, vmin=-0.2, vmax=0.2, cmap='plasma')
 
     # create an axes on the right side of ax. The width of cax will be 5%
     # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -56,11 +79,12 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    mass_img_path = os.path.join(ROOT, 'fig/hammer_mass.png')
-    bottom_fric_img_path = os.path.join(ROOT, 'fig/hammer_fric.png')
+    mass_img_path = os.path.join(ROOT, 'fig/rod2_mass.png')
+    bottom_fric_img_path = os.path.join(ROOT, 'fig/rod2_fric.png')
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=20)
+    sim.bottom_fric_est = sim.bottom_fric_gt
     
     learning_rate = 1e-4
     max_iter = 100
@@ -69,17 +93,17 @@ def sys_id_demo(screen):
     mass_err_hist = []
     last_dist = 1e10
     for i in range(max_iter):
-        if i == 35: 
-            a = 1
         
         rotation, offset, action, X1, X2 = sim.run_episode_random(time=TIME, screen=screen)
 
-        plot_mass_error(sim.mask, sim.mass_gt, 
-                        sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
+        # plot_mass_error(sim.mask, sim.mass_gt, 
+        #                 sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
+        plot_mass_stat(sim.mask, sim.mass_gt, sim.mass_est, save_path=os.path.join(ROOT, 
+                                                            'tmp/mass_stat_%d.jpg'%i))
         
         dist = torch.sum(torch.norm(X1 - X2, dim=1))
         dist.backward()
-        grad = sim.mass_est.grad.data
+        grad = torch.nan_to_num(sim.mass_est.grad.data)
         print(grad)
         grad.clamp_(1/learning_rate * -2e-3, 1/learning_rate * 2e-3)
 
