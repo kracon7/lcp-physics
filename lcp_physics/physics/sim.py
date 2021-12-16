@@ -48,7 +48,7 @@ class SimSingle():
                 bottom_fric_gt=None, mass_est=None, bottom_fric_est=None, mask=None,
                 DT = Defaults.DT, DEVICE = Defaults.DEVICE):
         
-        self.particle_pos0 = particle_pos0
+        self.particle_pos0 = get_tensor(particle_pos0)
         self.particle_radius = particle_radius
         self.N = self.particle_pos0.shape[0]
         self.DEVICE = DEVICE
@@ -61,7 +61,7 @@ class SimSingle():
         if bottom_fric_gt is None:
             self.bottom_fric_gt = torch.FloatTensor([0.001, 0.1]).repeat(self.N, 1).to(DEVICE)
         else:
-            self.bottom_fric_gt = bottom_fric_gt
+            self.bottom_fric_gt = get_tensor(bottom_fric_gt)
 
         if mass_est is None:
             self.mass_est = 0.05 * torch.ones(self.N).to(DEVICE)
