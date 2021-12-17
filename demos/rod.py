@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
+from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite, CompositeSquare
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder
@@ -32,6 +32,7 @@ def make_world_2(rod_mass, rod_fric, action):
                   [560, 300],
                   [600, 300]])
     rod = Composite(p, 20, mass=rod_mass, fric_coeff_b=rod_fric)
+    rod = CompositeSquare(p, 20, mass=rod_mass, fric_coeff_b=rod_fric)
     bodies += rod.bodies
     joints += rod.joints
 

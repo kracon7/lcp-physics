@@ -29,11 +29,11 @@ class Defaults:
     DT = 1.0 / FPS
 
     ENGINE = 'PdipmEngine'
-    CONTACT = 'OdeContactHandler'
+    CONTACT = 'DiffContactHandler'
 
     # Tensor defaults
-    # DTYPE = torch.double
-    DTYPE = torch.float
+    DTYPE = torch.double
+    # DTYPE = torch.float
     DEVICE = torch.device('cpu')
     # DEVICE = torch.device('cuda')
     LAYOUT = torch.strided

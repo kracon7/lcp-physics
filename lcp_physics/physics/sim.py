@@ -12,7 +12,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 import torch
 from torch.autograd import Variable
 
-from .bodies import Circle, Rect, Hull, Composite
+from .bodies import Circle, Rect, Hull, Composite, CompositeSquare
 from .constraints import TotalConstraint, FixedJoint
 from .forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from .utils import Defaults, plot, Recorder, rgb2mass, mass2rgb, get_tensor
@@ -103,7 +103,7 @@ class SimSingle():
                                     [sin(rotation), cos(rotation)]])
         particle_pos = particle_pos @ rotation_matrix.T + np.array(offset)
 
-        composite_body = Composite(particle_pos, particle_radius, mass=mass_profile, 
+        composite_body = CompositeSquare(particle_pos, particle_radius, mass=mass_profile, 
                                     fric_coeff_b=bottom_fric_profile)
         return composite_body
 

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import torch
 from torch.autograd import Variable
 
-from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite
+from lcp_physics.physics.bodies import Circle, Rect, Hull, Composite, CompositeSquare
 from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, Recorder
@@ -29,6 +29,7 @@ def make_world(particle_pos, particle_radius, hand):
     fric_coeff_s = 0.15
 
     composite_body = Composite(particle_pos, particle_radius)
+    composite_body = CompositeSquare(particle_pos, particle_radius)
     bodies += composite_body.bodies
     joints += composite_body.joints
 
@@ -47,7 +48,7 @@ def make_world(particle_pos, particle_radius, hand):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, solver_type=3)
+    world = World(bodies, joints, dt=DT, extend=1, solver_type=1)
     return world
     
 

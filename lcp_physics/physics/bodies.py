@@ -383,3 +383,70 @@ class Composite():
             no_contact[i] = neighbors
 
         return no_contact
+
+
+class CompositeSquare():
+    """rigid body based on cuboid formulation"""
+    def __init__(self, particle_pos, dim, mass=0.01, 
+                fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B):
+        '''
+        Input:
+            particle_pos -- ndarray (N, 2) 2D position of particles
+            dim -- half of the side length of each square particle
+            mass -- float or ndarray (N,), mass of each particle
+            fric_coeff_s -- side friction coefficient
+            fric_coeff_b -- bottom friction coefficient
+        '''
+
+        bodies = []
+        joints = []
+        N = particle_pos.shape[0]
+        if isinstance(mass, float):
+            mass = mass * np.ones(N)
+
+        if isinstance(fric_coeff_b, list):
+            fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
+
+        for i in range(N):
+            c = Rect(particle_pos[i], [2*dim, 2*dim], mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b[i])
+
+            bodies.append(c)
+
+        for i in range(N-1):
+            joints += [FixedJoint(bodies[i], bodies[-1])]
+
+        # add contact exclusion
+        no_contact = self.find_neighbors(particle_pos, dim)
+        for i in range(N):
+            neighbors = no_contact[i]
+            for j in neighbors:
+                bodies[i].add_no_contact(bodies[j])
+
+        self.bodies = bodies
+        self.joints = joints
+        self.dim = dim
+        self.mass = mass
+        self.fric_coeff_b = fric_coeff_b
+
+    def get_particle_pos(self):
+        pos = []
+        for b in self.bodies:
+            pos.append(b.pos)
+        pos = torch.stack(pos)
+        return pos
+
+    def find_neighbors(self, particle_pos, radius):
+        '''
+        find neighbors of particles for contact exlusion
+        '''
+        point_tree = spatial.cKDTree(particle_pos)
+        neighbors_list = point_tree.query_ball_point(particle_pos, 4*radius)
+
+        no_contact = defaultdict(list)
+        for i in range(particle_pos.shape[0]):
+            neighbors = neighbors_list[i]
+            neighbors.remove(i)
+            no_contact[i] = neighbors
+
+        return no_contact
