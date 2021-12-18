@@ -169,3 +169,25 @@ def rgb2mass(rgb):
 
     return mass
 
+def rel_pose(p1, p2):
+    ''' 
+    Compute the relative translation and rotation between 2 array of
+    particle positions of composite objects.
+    The object origin is assumed at the first particle center
+    Input:
+        p1, p2 -- torch tensors of shape (N, 2)
+    Output:
+        trans -- translation from p1 origin to p2 origin
+        theta -- rotation from p1 to p2
+    '''
+    trans = p2[0] - p1[0]
+
+    p1 = p1[1:] - p1[0]
+    p2 = p2[1:] - p2[0]
+    s = (p1[:, 0] * p2[:, 1] - p1[:, 1] * p2[:, 0]) / \
+        (torch.norm(p1, dim=-1) * torch.norm(p2, dim=-1))
+    c = torch.bmm(p1.unsqueeze(1), p2.unsqueeze(-1)).reshape(-1) / \
+        (torch.norm(p1, dim=-1) * torch.norm(p2, dim=-1))
+    theta = torch.mean(torch.atan2(s, c), dim=0, keepdim=True)
+
+    return torch.cat([theta, trans])
