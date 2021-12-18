@@ -61,6 +61,7 @@ def sys_id_demo(screen):
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=20)
+    sim.bottom_fric_est = sim.bottom_fric_gt
     
     learning_rate = 1e-4
     max_iter = 100
