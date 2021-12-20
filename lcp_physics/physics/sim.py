@@ -106,7 +106,10 @@ class SimSingle():
     def sample_action(self, composite_body):
         # get composite object particle pos
         p = composite_body.get_particle_pos()
-        curr_pose = rel_pose(self.particle_pos0, p).detach().cpu().numpy()
+        if p.shape[0] == 1:
+            curr_pose = composite_body.bodies[0].p.detach().cpu().numpy()
+        else:
+            curr_pose = rel_pose(self.particle_pos0, p).detach().cpu().numpy()
         theta, offset = curr_pose[0], curr_pose[1:]
         rotation_matrix = np.array([[np.cos(theta), -np.sin(theta)], 
                                     [np.sin(theta),  np.cos(theta)]])
@@ -172,7 +175,7 @@ class SimSingle():
 
         return particle_pose
 
-    def make_world(self, composite_body, action):
+    def make_world(self, composite_body, action, verbose):
         bodies = []
         joints = []
         bodies += composite_body.bodies
@@ -189,11 +192,11 @@ class SimSingle():
         c1.add_force(ExternalForce(push_force))
         
         # init world
-        world = World(bodies, joints, dt=Defaults.DT, extend=1, solver_type=1)
+        world = World(bodies, joints, dt=Defaults.DT, verbose=verbose, extend=1, solver_type=1)
 
         return world
 
-    def run_episode_random(self, time=10, screen=None, recorder=None):
+    def run_episode_random(self, time=10, verbose=-1, screen=None, recorder=None):
         rotation, offset = self.random_rest_composite_pose()
         # init composite object with offset and rotation
         composite_body_gt = self.init_composite_object(
@@ -204,7 +207,7 @@ class SimSingle():
                                     rotation=rotation,
                                     offset=offset)
         action = self.sample_action(composite_body_gt)
-        world = self.make_world(composite_body_gt, action)
+        world = self.make_world(composite_body_gt, action, verbose)
         recorder = None
         # recorder = Recorder(DT, screen)
         run_world(world, run_time=time, screen=screen, recorder=recorder)
@@ -218,7 +221,7 @@ class SimSingle():
                                     self.bottom_fric_gt,
                                     rotation=rotation,
                                     offset=offset)
-        world = self.make_world(composite_body, action)
+        world = self.make_world(composite_body, action, verbose)
         run_world(world, run_time=time, screen=screen, recorder=recorder)
 
         X2 = composite_body.get_particle_pos()

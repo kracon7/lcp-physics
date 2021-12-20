@@ -41,8 +41,8 @@ if __name__ == '__main__':
         os.makedirs(save_path)
     
     # select object name
-    object_names = ['hammer', 'drill', 'rod1', 'rod2']
-    obj_name = object_names[0]
+    object_names = ['hammer', 'drill', 'rod1', 'rod2', 'circle']
+    obj_name = object_names[4]
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 

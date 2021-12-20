@@ -362,7 +362,7 @@ if __name__ == '__main__':
     img = cv2.imread(os.path.join(ROOT, 'fig/drill_mass.png'))
     # img = cv2.imread(os.path.join(ROOT, 'fig/rod1_mass.png'))
     # img = cv2.imread(os.path.join(ROOT, 'fig/line.png'))
-    # img = cv2.imread(os.path.join(ROOT, 'fig/circle_mass.png'))
+    img = cv2.imread(os.path.join(ROOT, 'fig/circle_mass.png'))
 
     particle_radius = 10
     mask = img[:,:,0] < 255

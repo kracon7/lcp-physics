@@ -81,11 +81,11 @@ def sys_id_demo(screen):
         
         dist = torch.sum(torch.norm(X1 - X2, dim=1))
         dist.backward()
-        grad = sim.mass_est.grad.data
+        grad = torch.nan_to_num(sim.mass_est.grad.data)
         print(grad)
         grad.clamp_(1/learning_rate * -2e-3, 1/learning_rate * 2e-3)
 
-        sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-4)
+        sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-5)
         sim.mass_est.requires_grad=True
 
         # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
