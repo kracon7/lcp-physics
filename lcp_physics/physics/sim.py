@@ -76,8 +76,8 @@ class SimSingle():
 
         self.hand_radius = hand_radius
         self.mask = mask
-        self.action_mag = 20
-        self.force_time = 0.1
+        self.action_mag = 2
+        self.force_time = 0.3
 
         # build cononical exterior mesh
         polygon, polygon_coord, normals = build_exterior_mesh(particle_pos0, particle_radius)
@@ -186,9 +186,9 @@ class SimSingle():
         bodies.append(c1)
 
         # init force and apply force
-        f = 2 * action[1]
+        f = self.action_mag * action[1]
         initial_force = torch.FloatTensor([0, f[0], f[1]]).to(self.DEVICE)
-        push_force = lambda t: initial_force if t < 0.3 else ExternalForce.ZEROS
+        push_force = lambda t: initial_force if t < self.force_time else ExternalForce.ZEROS
         c1.add_force(ExternalForce(push_force))
         
         # init world
@@ -196,7 +196,7 @@ class SimSingle():
 
         return world
 
-    def run_episode_random(self, time=10, verbose=-1, screen=None, recorder=None):
+    def run_episode_random(self, t=10, verbose=-1, screen=None, recorder=None):
         rotation, offset = self.random_rest_composite_pose()
         # init composite object with offset and rotation
         composite_body_gt = self.init_composite_object(
@@ -210,7 +210,7 @@ class SimSingle():
         world = self.make_world(composite_body_gt, action, verbose)
         recorder = None
         # recorder = Recorder(DT, screen)
-        run_world(world, run_time=time, screen=screen, recorder=recorder)
+        run_world(world, run_time=t, screen=screen, recorder=recorder)
 
         X1 = composite_body_gt.get_particle_pos()
         
@@ -222,7 +222,7 @@ class SimSingle():
                                     rotation=rotation,
                                     offset=offset)
         world = self.make_world(composite_body, action, verbose)
-        run_world(world, run_time=time, screen=screen, recorder=recorder)
+        run_world(world, run_time=t, screen=screen, recorder=recorder)
 
         X2 = composite_body.get_particle_pos()
 
