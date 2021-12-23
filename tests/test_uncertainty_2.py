@@ -70,7 +70,7 @@ def get_stat(data):
     data = torch.stack(data)
     var, mean = torch.var_mean(data, 0)
     return torch.sqrt(var), mean
-    
+
 def sys_id_demo(screen):
 
     if screen is not None:
@@ -86,7 +86,7 @@ def sys_id_demo(screen):
     sim_list = []
     for _ in range(num_guess):
         sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
-                    hand_radius=20)
+                    hand_radius=20,)
         sim.mass_est = 0.25 * torch.rand(1) + 0.03
         sim.mass_est.requires_grad = True
         sim.bottom_fric_est = sim.bottom_fric_gt

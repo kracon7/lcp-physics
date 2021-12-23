@@ -27,13 +27,14 @@ DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 np.random.seed(10)
+torch.random.manual_seed(0)
 
 def plot_mass_error(mask, m1, m2, save_path=None):
     err = np.zeros_like(mask).astype('float')
     err[mask] = m1 - m2
 
     ax = plt.subplot()
-    im = ax.imshow(err, vmin=-0.1, vmax=0.1, cmap='plasma')
+    im = ax.imshow(err, vmin=-0.2, vmax=0.2, cmap='plasma')
 
     # create an axes on the right side of ax. The width of cax will be 5%
     # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -56,12 +57,17 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    mass_img_path = os.path.join(ROOT, 'fig/hammer_mass.png')
-    bottom_fric_img_path = os.path.join(ROOT, 'fig/hammer_fric.png')
+    obj_name = 'drill'
+    mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
+    bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=20)
     sim.bottom_fric_est = sim.bottom_fric_gt
+    sim.action_mag = 20
+    sim.force_time = 0.3
+    sim.mass_est = 0.09 * torch.ones(sim.N).to(DEVICE)
+    sim.mass_est = Variable(sim.mass_est, requires_grad=True)
     
     learning_rate = 1e-4
     max_iter = 100
@@ -70,11 +76,8 @@ def sys_id_demo(screen):
     mass_err_hist = []
     last_dist = 1e10
     for i in range(max_iter):
-        
-        if i == 31:
-            a = 1
 
-        rotation, offset, action, X1, X2 = sim.run_episode_random(time=TIME, screen=screen)
+        rotation, offset, action, X1, X2 = sim.run_episode_random(t=TIME, screen=screen)
 
         plot_mass_error(sim.mask, sim.mass_gt, 
                         sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
@@ -90,12 +93,9 @@ def sys_id_demo(screen):
 
         # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
         learning_rate *= 0.99
-        print(i, '/', max_iter, dist.data.item())
+        print(i, '/', max_iter, dist.data.item() / sim.N)
         
         print('=======\n\n')
-        # if abs((last_dist - dist).data.item()) < 1e-5:
-        #     break
-        last_dist = dist
         dist_hist.append(dist / sim.N)
 
         reset_screen(screen)

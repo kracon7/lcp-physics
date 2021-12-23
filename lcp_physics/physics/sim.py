@@ -182,7 +182,7 @@ class SimSingle():
         joints += composite_body.joints
         
         # init hand object
-        c1 = Circle(action[0], self.hand_radius, fric_coeff_b=[0.005, 0.45])
+        c1 = Circle(action[0], self.hand_radius, mass=10, fric_coeff_b=[0.005, 0.45])
         bodies.append(c1)
 
         # init force and apply force
