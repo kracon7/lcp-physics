@@ -80,16 +80,17 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    mass_img_path = os.path.join(ROOT, 'fig/rod0_mass.png')
-    bottom_fric_img_path = os.path.join(ROOT, 'fig/rod0_fric.png')
+    obj_name = 'drill'
+    mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
+    bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 
-    num_guess = 5
+    num_guess = 3
     sim_list = []
     for _ in range(num_guess):
         sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=20)
-        sim.action_mag = 15
-        sim.force_time = 0.2
+        sim.action_mag = 20
+        sim.force_time = 0.3
         gt_mean = sim.mass_gt.mean()
         sim.mass_est = 0.04 * torch.rand(sim.N) - 0.02 + gt_mean
         sim.mass_est.requires_grad = True
@@ -97,7 +98,7 @@ def sys_id_demo(screen):
         sim_list.append(sim)
     
     learning_rate = 5e-4
-    max_iter = 10
+    max_iter = 40
 
     mass_est_hist = []
     dist_hist = [[] for _ in range(num_guess)]
