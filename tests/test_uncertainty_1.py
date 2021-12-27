@@ -46,7 +46,7 @@ def plot_mass_stat(mask, gt, mean, var, save_path=None):
     fig, ax = plt.subplots(1,3)
     im0 = ax[0].imshow(I0, vmin=0, vmax=0.3, cmap='plasma')
     im1 = ax[1].imshow(I1, vmin=0, vmax=0.3, cmap='plasma')
-    im2 = ax[2].imshow(I2, vmin=0, vmax=0.3, cmap='plasma')
+    im2 = ax[2].imshow(I2, vmin=0, vmax=0.1, cmap='plasma')
 
     divider = make_axes_locatable(ax[2])
     cax = divider.append_axes("right", size="5%", pad=0.05)
