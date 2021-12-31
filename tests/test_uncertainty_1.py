@@ -80,17 +80,19 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    obj_name = 'drill'
+    obj_name = 'rod1'
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
+    default_actions = {'rod1':  {'action_mag': 15, 'force_time': 0.2},
+                       'drill': {'action_mag': 20, 'force_time': 0.3}}
 
     num_guess = 3
     sim_list = []
     for _ in range(num_guess):
         sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
-                    hand_radius=20)
-        sim.action_mag = 20
-        sim.force_time = 0.3
+                    hand_radius=5)
+        sim.action_mag = default_actions[obj_name]['action_mag']
+        sim.force_time = default_actions[obj_name]['force_time']
         gt_mean = sim.mass_gt.mean()
         sim.mass_est = 0.04 * torch.rand(sim.N) - 0.02 + gt_mean
         sim.mass_est.requires_grad = True
@@ -114,7 +116,7 @@ def sys_id_demo(screen):
             dist = torch.sum(torch.norm(X1 - X2, dim=1))
             dist.backward()
             grad = sim.mass_est.grad.data
-            grad.clamp_(1/learning_rate * -5e-3, 1/learning_rate * 5e-3)
+            # grad.clamp_(1/learning_rate * -5e-3, 1/learning_rate * 5e-3)
             print('\n', grad, '\n', learning_rate*grad)
 
             sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-5)
