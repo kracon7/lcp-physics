@@ -241,8 +241,8 @@ class SimSingle():
         recorder = None
         # recorder = Recorder(DT, screen)
         run_world(world, run_time=t, screen=screen, recorder=recorder)
-        X1 = composite_body_gt.get_particle_pos()
-        return X1
+        X = composite_body_gt.get_particle_pos()
+        return X
 
     def run_episode_est(self, action, rotation, offset, 
                              t=10, verbose=-1, screen=None, recorder=None):
@@ -255,7 +255,7 @@ class SimSingle():
                                     offset=offset)
         world = self.make_world(composite_body, action, verbose)
         run_world(world, run_time=t, screen=screen, recorder=recorder)
-        X2 = composite_body.get_particle_pos()
-        return X2
+        X = composite_body.get_particle_pos()
+        return X
 
 
