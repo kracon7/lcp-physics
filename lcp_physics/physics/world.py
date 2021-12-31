@@ -86,6 +86,9 @@ class World:
         start_rot_joints = [(j[0].rot1, j[0].rot2) for j in self.joints]
         new_v = self.engine.solve_dynamics(self, dt)
         self.set_v(new_v)
+
+        cnt = 0
+
         while True:
             # try step with current dt
             for body in self.bodies:
@@ -99,6 +102,9 @@ class World:
                 if not self.strict_no_pen and dt < self.dt / 4:
                     # if step becomes too small, just continue
                     break
+
+                cnt += 1
+
                 dt /= 2
                 # reset positions to beginning of step
                 # XXX Clones necessary?
@@ -106,6 +112,9 @@ class World:
                 for j, c in zip(self.joints, start_rot_joints):
                     j[0].rot1 = c[0].clone()
                     j[0].update_pos()
+
+        if cnt > 0:
+            print('Number of time step reductions %d'%cnt)
 
         if self.post_stab:
             tmp_v = self.v
