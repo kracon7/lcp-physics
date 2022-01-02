@@ -34,7 +34,7 @@ def plot_mass_error(mask, m1, m2, save_path=None):
     err[mask] = m1 - m2
 
     ax = plt.subplot()
-    im = ax.imshow(err, vmin=-0.2, vmax=0.2, cmap='plasma')
+    im = ax.imshow(err, vmin=-0.15, vmax=0.15, cmap='plasma')
 
     # create an axes on the right side of ax. The width of cax will be 5%
     # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -47,7 +47,6 @@ def plot_mass_error(mask, m1, m2, save_path=None):
 
     plt.clf()
     ax.cla()
-
 
 def sys_id_demo(screen):
 
@@ -62,47 +61,100 @@ def sys_id_demo(screen):
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
-                    hand_radius=20)
+                    hand_radius=10)
     sim.bottom_fric_est = sim.bottom_fric_gt
     sim.action_mag = 20
     sim.force_time = 0.3
     sim.mass_est = 0.09 * torch.ones(sim.N).to(DEVICE)
     sim.mass_est = Variable(sim.mass_est, requires_grad=True)
     
-    learning_rate = 1e-4
-    max_iter = 100
+    max_iter = 20
 
-    dist_hist = []
+    dist_hist, new_dist_hist = [], []
     mass_err_hist = []
     last_dist = 1e10
     for i in range(max_iter):
-
-        rotation, offset, action, X1, X2 = sim.run_episode_random(t=TIME, screen=screen)
-
         plot_mass_error(sim.mask, sim.mass_gt, 
                         sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
+
+        #################  Compute the gradient direction  ###################
+        rotation, offset = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
+        composite_body_gt = sim.init_composite_object(
+                                    sim.particle_pos0,
+                                    sim.particle_radius, 
+                                    sim.mass_gt,
+                                    sim.bottom_fric_gt,
+                                    rotation=rotation,
+                                    offset=offset)
+        action = sim.sample_action(composite_body_gt)
+        world = sim.make_world(composite_body_gt, action, verbose=-1)
+        recorder = None
+        # recorder = Recorder(DT, screen)
+        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        X1 = composite_body_gt.get_particle_pos()
+        
+        composite_body = sim.init_composite_object(
+                                    sim.particle_pos0,
+                                    sim.particle_radius, 
+                                    sim.mass_est,
+                                    sim.bottom_fric_gt,
+                                    rotation=rotation,
+                                    offset=offset)
+        world = sim.make_world(composite_body, action, verbose=-1)
+        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        X2 = composite_body.get_particle_pos()
         
         dist = torch.sum(torch.norm(X1 - X2, dim=1))
         dist.backward()
         grad = torch.nan_to_num(sim.mass_est.grad.data)
         print(grad)
-        grad.clamp_(1/learning_rate * -2e-3, 1/learning_rate * 2e-3)
 
+        #################  Backtracking line search  ###################
+        cm = - 0.5 * torch.norm(grad)**2
+        alpha, rho = 0.01 / torch.abs(grad).max(), 0.6
+        count = 1
+
+        while True:
+            mass_est = torch.clamp(sim.mass_est.data - alpha * grad, min=1e-5)
+            composite_body = sim.init_composite_object(
+                                        sim.particle_pos0,
+                                        sim.particle_radius, 
+                                        mass_est,
+                                        sim.bottom_fric_gt,
+                                        rotation=rotation,
+                                        offset=offset)
+            world = sim.make_world(composite_body, action, verbose=-1)
+            run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+            X2 = composite_body.get_particle_pos()
+            new_dist = torch.sum(torch.norm(X1 - X2, dim=1))
+
+            if new_dist - dist > alpha * cm:
+                alpha *= rho
+            else:
+                break
+
+            if count >= 3:
+                break
+
+            count += 1
+
+        #################  Update mass_est  ###################
+        learning_rate = alpha
         sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-5)
         sim.mass_est.requires_grad=True
 
-        # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
-        learning_rate *= 0.99
         print(i, '/', max_iter, dist.data.item() / sim.N)
         
         print('=======\n\n')
         dist_hist.append(dist / sim.N)
+        new_dist_hist.append(new_dist / sim.N)
 
         reset_screen(screen)
 
-    plot(dist_hist)
-
-
+    fig, ax = plt.subplots(1, 1)
+    ax.plot(dist_hist, color='r')
+    ax.plot(new_dist_hist, color='b')
+    plt.show()
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':
