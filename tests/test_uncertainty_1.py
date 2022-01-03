@@ -80,13 +80,14 @@ def sys_id_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    obj_name = 'rod1'
+    obj_name = 'hammer'
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
     default_actions = {'rod1':  {'action_mag': 15, 'force_time': 0.2},
-                       'drill': {'action_mag': 20, 'force_time': 0.3}}
+                       'drill': {'action_mag': 20, 'force_time': 0.3},
+                       'hammer': {'action_mag': 20, 'force_time': 0.2}}
 
-    num_guess = 3
+    num_guess = 4
     sim_list = []
     for _ in range(num_guess):
         sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
@@ -94,37 +95,88 @@ def sys_id_demo(screen):
         sim.action_mag = default_actions[obj_name]['action_mag']
         sim.force_time = default_actions[obj_name]['force_time']
         gt_mean = sim.mass_gt.mean()
-        sim.mass_est = 0.04 * torch.rand(sim.N) - 0.02 + gt_mean
+        sim.mass_est = 0.06 * torch.rand(sim.N) - 0.03 + gt_mean
         sim.mass_est.requires_grad = True
         sim.bottom_fric_est = sim.bottom_fric_gt
         sim_list.append(sim)
     
-    learning_rate = 5e-4
-    max_iter = 40
+    max_iter = 30
 
     mass_est_hist = []
     dist_hist = [[] for _ in range(num_guess)]
     for i in range(max_iter):
 
+        #################  Compute the gradient direction  ###################
+        rotation, offset = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
+        composite_body_gt = sim.init_composite_object(
+                                    sim.particle_pos0,
+                                    sim.particle_radius, 
+                                    sim.mass_gt,
+                                    sim.bottom_fric_gt,
+                                    rotation=rotation,
+                                    offset=offset)
+        action = sim.sample_action(composite_body_gt)
+        world = sim.make_world(composite_body_gt, action, verbose=-1)
+        recorder = None
+        # recorder = Recorder(DT, screen)
+        run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        X1 = composite_body_gt.get_particle_pos()
+
         temp = []
         for k, sim in enumerate(sim_list):
             temp.append(sim.mass_est)
 
-            rotation, offset, action, X1, X2 = sim.run_episode_random(t=TIME, 
-                                                            screen=screen, verbose=0)
+            composite_body = sim.init_composite_object(
+                                        sim.particle_pos0,
+                                        sim.particle_radius, 
+                                        sim.mass_est,
+                                        sim.bottom_fric_gt,
+                                        rotation=rotation,
+                                        offset=offset)
+            world = sim.make_world(composite_body, action, verbose=-1)
+            run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+            X2 = composite_body.get_particle_pos()
             
             dist = torch.sum(torch.norm(X1 - X2, dim=1))
             dist.backward()
-            grad = sim.mass_est.grad.data
-            # grad.clamp_(1/learning_rate * -5e-3, 1/learning_rate * 5e-3)
-            print('\n', grad, '\n', learning_rate*grad)
+            grad = torch.nan_to_num(sim.mass_est.grad.data)
+            print(grad)
+            
+            #################  Backtracking line search  ###################
+            cm = - 0.5 * torch.norm(grad)**2
+            alpha, rho = torch.clamp(0.01 / torch.abs(grad).max(), min=1e-5, max=1e-3), 0.6
+            count = 1
 
+            while True:
+                mass_est = torch.clamp(sim.mass_est.data - alpha * grad, min=1e-5)
+                composite_body = sim.init_composite_object(
+                                            sim.particle_pos0,
+                                            sim.particle_radius, 
+                                            mass_est,
+                                            sim.bottom_fric_gt,
+                                            rotation=rotation,
+                                            offset=offset)
+                world = sim.make_world(composite_body, action, verbose=-1)
+                run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+                X2 = composite_body.get_particle_pos()
+                new_dist = torch.sum(torch.norm(X1 - X2, dim=1))
+
+                if new_dist - dist > alpha * cm:
+                    alpha *= rho
+                else:
+                    break
+
+                if count >= 3:
+                    break
+
+                count += 1
+
+            #################  Update mass_est  ###################
+            learning_rate = alpha
             sim.mass_est = torch.clamp(sim.mass_est.data - learning_rate * grad, min=1e-5)
             sim.mass_est.requires_grad=True
-            # print('\n bottom friction coefficient: ', mu.detach().cpu().numpy().tolist())
-            learning_rate *= 0.95
-            print(i, '/', max_iter, '%8d'%k, '/', num_guess, '   dist: ', dist.data.item())
-            
+
+            print(i, '/', max_iter, '%8d'%k, '/', num_guess, '   dist: ', dist.data.item()/sim.N)            
             print('=======\n\n')
 
             reset_screen(screen)

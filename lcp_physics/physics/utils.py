@@ -75,8 +75,9 @@ class Recorder:
             self.prev_t += self.dt
 
 def reset_screen(screen):
-    pygame.draw.rect(screen, (255, 255, 255), (0,0)+screen.get_size(), width=0)
-    pygame.display.update()
+    if screen:
+        pygame.draw.rect(screen, (255, 255, 255), (0,0)+screen.get_size(), width=0)
+        pygame.display.update()
 
 
 def cart_to_polar(cart_vec, positive=True):

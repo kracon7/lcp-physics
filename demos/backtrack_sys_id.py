@@ -65,8 +65,11 @@ def sys_id_demo(screen):
     sim.bottom_fric_est = sim.bottom_fric_gt
     sim.action_mag = 20
     sim.force_time = 0.3
-    sim.mass_est = 0.09 * torch.ones(sim.N).to(DEVICE)
-    sim.mass_est = Variable(sim.mass_est, requires_grad=True)
+    # sim.mass_est = 0.09 * torch.ones(sim.N).to(DEVICE)
+    # sim.mass_est = Variable(sim.mass_est, requires_grad=True)
+    gt_mean = sim.mass_gt.mean()
+    sim.mass_est = 0.04 * torch.rand(sim.N) - 0.02 + gt_mean
+    sim.mass_est.requires_grad = True
     
     max_iter = 20
 
