@@ -128,6 +128,10 @@ def build_exterior_mesh(points, voxel_size, vis=False):
             plt.plot([pt_coord[0], pt_coord[0] + 3*normals[i,0]], 
                        [pt_coord[1], pt_coord[1] + 3*normals[i,1]], color='r')
         plt.plot(smooth_points[:, 0], smooth_points[:,1], '+')
+
+        ax.invert_yaxis()
+        ax.set_xlabel('x (same in pygame)')
+        ax.set_ylabel('y (same in pygame)')
         plt.show()
 
     return polygon, polygon_coord, normals
@@ -362,7 +366,7 @@ if __name__ == '__main__':
     img = cv2.imread(os.path.join(ROOT, 'fig/drill_mass.png'))
     # img = cv2.imread(os.path.join(ROOT, 'fig/rod1_mass.png'))
     # img = cv2.imread(os.path.join(ROOT, 'fig/line.png'))
-    img = cv2.imread(os.path.join(ROOT, 'fig/circle_mass.png'))
+    # img = cv2.imread(os.path.join(ROOT, 'fig/circle_mass.png'))
 
     particle_radius = 10
     mask = img[:,:,0] < 255
@@ -373,7 +377,7 @@ if __name__ == '__main__':
     polygon, polygon_coord, normals = build_exterior_mesh(particle_pos, particle_radius, 
                                                             vis=True)
 
-    hand_radius = 30
+    hand_radius = 5
     # randomly select the vertex and normal
     N = polygon.shape[0]
     idx = np.random.choice(N)
@@ -389,7 +393,7 @@ if __name__ == '__main__':
     start_pos = vtx + hand_radius * nml
 
     while overlap_check(particle_pos, particle_radius, start_pos, hand_radius):
-            start_pos += 0.5 * nml
+        start_pos += 0.5 * nml
 
     action = [start_pos, -nml]
 
@@ -409,4 +413,8 @@ if __name__ == '__main__':
 
     plt.plot([start_pos[0], start_pos[0] - 2*hand_radius*nml[0]],
               [start_pos[1], start_pos[1] - 2*hand_radius*nml[1]], color='lightgreen')
+
+    ax.invert_yaxis()
+    ax.set_xlabel('x (same in pygame)')
+    ax.set_ylabel('y (same in pygame)')
     plt.show()
