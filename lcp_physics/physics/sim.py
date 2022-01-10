@@ -38,7 +38,7 @@ def image_to_mass(mass_img, mask):
 
 def image_to_bottom_fric(fric_img, mask):
     img = cv2.imread(fric_img).astype('float') / 255
-    bottom_fric_profile = np.stack([img[:,:,2][mask]/100, img[:,:,1][mask]], axis=-1)
+    bottom_fric_profile = np.stack([img[:,:,2][mask]/2, img[:,:,1][mask]], axis=-1)
     return bottom_fric_profile
 
 
@@ -93,7 +93,7 @@ class SimSingle():
         mass_gt = image_to_mass(mass_img_path, mask)
         bottom_fric_gt = image_to_bottom_fric(bottom_fric_img_path, mask)
         return cls(particle_pos0, particle_radius, hand_radius, mass_gt=mass_gt, 
-                    bottom_fric_gt=bottom_fric_gt, mask=mask)    
+                    bottom_fric_gt=bottom_fric_gt, obj_mask=mask)    
 
     def random_rest_composite_pose(self, batch_size=1):
         # randomly initialize rotation and offset
@@ -128,8 +128,8 @@ class SimSingle():
         
         start_pos = vtx + self.hand_radius * nml
 
-        while self.overlap_check(self.particle_pos0, 1.5*self.particle_radius, 
-                                start_pos, self.hand_radius):
+        while self.overlap_check(self.polygon_coord, 0.1*self.particle_radius, 
+                                 start_pos, self.hand_radius):
             start_pos += 0.5 * nml
 
         start_pos = rotation_matrix @ start_pos + offset
@@ -175,7 +175,7 @@ class SimSingle():
 
         return particle_pose
 
-    def make_world(self, composite_body, action, verbose):
+    def make_world(self, composite_body, action, verbose=0, strict_no_pen=True):
         bodies = []
         joints = []
         bodies += composite_body.bodies
@@ -192,7 +192,8 @@ class SimSingle():
         c1.add_force(ExternalForce(push_force))
         
         # init world
-        world = World(bodies, joints, dt=Defaults.DT, verbose=verbose, extend=1, solver_type=1)
+        world = World(bodies, joints, dt=Defaults.DT, verbose=verbose, extend=1, solver_type=1,
+                    strict_no_penetration=strict_no_pen)
 
         return world
 

@@ -22,10 +22,10 @@ class Defaults:
     RESTITUTION = 0
 
     FRIC_COEFF_S = 0.1
-    FRIC_COEFF_B = [0.05, 0.1]
+    FRIC_COEFF_B = [0.5, 0.5]
     FRIC_DIRS = 2
 
-    FPS = 30
+    FPS = 50
     DT = 1.0 / FPS
 
     ENGINE = 'PdipmEngine'

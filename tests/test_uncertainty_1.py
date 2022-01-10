@@ -87,7 +87,7 @@ def sys_id_demo(screen):
                        'drill': {'action_mag': 20, 'force_time': 0.3},
                        'hammer': {'action_mag': 20, 'force_time': 0.2}}
 
-    num_guess = 4
+    num_guess = 3
     sim_list = []
     for _ in range(num_guess):
         sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
@@ -116,7 +116,7 @@ def sys_id_demo(screen):
                                     rotation=rotation,
                                     offset=offset)
         action = sim.sample_action(composite_body_gt)
-        world = sim.make_world(composite_body_gt, action, verbose=-1)
+        world = sim.make_world(composite_body_gt, action, verbose=-1, strict_no_pen=False)
         recorder = None
         # recorder = Recorder(DT, screen)
         run_world(world, run_time=TIME, screen=screen, recorder=recorder)
@@ -133,7 +133,7 @@ def sys_id_demo(screen):
                                         sim.bottom_fric_gt,
                                         rotation=rotation,
                                         offset=offset)
-            world = sim.make_world(composite_body, action, verbose=-1)
+            world = sim.make_world(composite_body, action, verbose=-1, strict_no_pen=False)
             run_world(world, run_time=TIME, screen=screen, recorder=recorder)
             X2 = composite_body.get_particle_pos()
             
@@ -156,7 +156,7 @@ def sys_id_demo(screen):
                                             sim.bottom_fric_gt,
                                             rotation=rotation,
                                             offset=offset)
-                world = sim.make_world(composite_body, action, verbose=-1)
+                world = sim.make_world(composite_body, action, verbose=-1, strict_no_pen=False)
                 run_world(world, run_time=TIME, screen=screen, recorder=recorder)
                 X2 = composite_body.get_particle_pos()
                 new_dist = torch.sum(torch.norm(X1 - X2, dim=1))
@@ -186,7 +186,7 @@ def sys_id_demo(screen):
         # compute the mean and variance and plot
         var, mean = get_stat(temp)
 
-        plot_mass_stat(sim.mask, sim.mass_gt, mean, var, save_path=os.path.join(ROOT, 
+        plot_mass_stat(sim.obj_mask, sim.mass_gt, mean, var, save_path=os.path.join(ROOT, 
                                                             'tmp/mass_stat_%d.jpg'%i))
     
     fig, ax = plt.subplots(1,1)
