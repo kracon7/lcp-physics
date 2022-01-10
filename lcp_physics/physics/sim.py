@@ -44,7 +44,7 @@ def image_to_bottom_fric(fric_img, mask):
 
 class SimSingle():
     def __init__(self, particle_pos0, particle_radius, hand_radius, mass_gt=None, 
-                bottom_fric_gt=None, mass_est=None, bottom_fric_est=None, mask=None,
+                bottom_fric_gt=None, mass_est=None, bottom_fric_est=None, obj_mask=None,
                 DT = Defaults.DT, DEVICE = Defaults.DEVICE):
         
         self.particle_pos0 = get_tensor(particle_pos0)
@@ -75,7 +75,7 @@ class SimSingle():
         self.bottom_fric_est = Variable(self.bottom_fric_est, requires_grad=True)
 
         self.hand_radius = hand_radius
-        self.mask = mask
+        self.obj_mask = obj_mask
         self.action_mag = 2
         self.force_time = 0.3
 
