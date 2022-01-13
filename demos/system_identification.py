@@ -62,15 +62,15 @@ def sys_id_demo(screen):
     bottom_fric_img_path = os.path.join(ROOT, 'fig/%s_fric.png'%obj_name)
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
-                    hand_radius=20)
+                    hand_radius=5)
     sim.bottom_fric_est = sim.bottom_fric_gt
     sim.action_mag = 20
-    sim.force_time = 0.3
+    sim.force_time = 0.5
     sim.mass_est = 0.09 * torch.ones(sim.N).to(DEVICE)
     sim.mass_est = Variable(sim.mass_est, requires_grad=True)
     
     learning_rate = 1e-4
-    max_iter = 100
+    max_iter = 30
 
     dist_hist = []
     mass_err_hist = []
@@ -79,7 +79,7 @@ def sys_id_demo(screen):
 
         rotation, offset, action, X1, X2 = sim.run_episode_random(t=TIME, screen=screen)
 
-        plot_mass_error(sim.mask, sim.mass_gt, 
+        plot_mass_error(sim.obj_mask, sim.mass_gt, 
                         sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
         
         dist = torch.sum(torch.norm(X1 - X2, dim=1))
