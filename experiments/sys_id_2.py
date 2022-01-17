@@ -1,6 +1,6 @@
 '''
 System identification with post-stabilization enabled
-Loss: MSELoss constructed over all points in the trajectory
+Loss: MSELoss constructed over ALL points in MULTIPLE trajectories
 Optimizer: RMSProp from PyTorch
 '''
 
@@ -34,7 +34,7 @@ DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-np.random.seed(10)
+np.random.seed(1)
 torch.random.manual_seed(0)
 
 def plot_mass_error(mask, m1, m2, save_path=None):
@@ -42,7 +42,8 @@ def plot_mass_error(mask, m1, m2, save_path=None):
     err[mask] = m1 - m2
 
     ax = plt.subplot()
-    im = ax.imshow(err, vmin=-0.2, vmax=0.2, cmap='plasma')
+    im = ax.imshow(err, vmin=-0.08, vmax=0.08, cmap='plasma')
+    # im = ax.imshow(err, cmap='plasma')
 
     # create an axes on the right side of ax. The width of cax will be 5%
     # of ax and the padding between cax and ax will be fixed at 0.05 inch.
@@ -76,32 +77,40 @@ def sys_id_demo(screen):
     sim.bottom_fric_est = sim.bottom_fric_gt
     sim.action_mag = default_actions[obj_name]['action_mag']
     sim.force_time = default_actions[obj_name]['force_time']
-    sim.mass_est = torch.rand_like(sim.mass_gt, requires_grad=True)
+    # sim.mass_est = torch.rand_like(sim.mass_gt, requires_grad=True)
+    gt_mean = sim.mass_gt.mean()
+    sim.mass_est = 0.1 * torch.rand(sim.N) - 0.05 + gt_mean
+    sim.mass_est.requires_grad = True
     
-    learning_rate = 1e-2
-    max_iter = 20
+    learning_rate = 1e-3
+    max_iter = 40
     loss_hist = []
     last_loss = 1e10
 
     # setup optimizer
-    optim = torch.optim.RMSprop([sim.mass_est], lr=learning_rate)
+    optim = torch.optim.SGD([sim.mass_est], lr=learning_rate)
 
-    # run ground truth to get ground truth trajectory
-    rotation, offset = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
-    composite_body_gt = sim.init_composite_object(
-                                sim.particle_pos0,
-                                sim.particle_radius, 
-                                sim.mass_gt,
-                                sim.bottom_fric_gt,
-                                rotation=rotation,
-                                offset=offset)
-    action = sim.sample_action(composite_body_gt)
-    world = sim.make_world(composite_body_gt, action, verbose=-1)
-    recorder = None
-    # recorder = Recorder(DT, screen)
-    ground_truth_pos = sim.positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-    ground_truth_pos = [p.data for p in ground_truth_pos]
-    ground_truth_pos = torch.cat(ground_truth_pos)
+    batch_size, batch_gt_pos, batch_actions = 4, [], []
+    for i in range(batch_size):
+        # run ground truth to get ground truth trajectory
+        rotation, offset = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
+        composite_body_gt = sim.init_composite_object(
+                                    sim.particle_pos0,
+                                    sim.particle_radius, 
+                                    sim.mass_gt,
+                                    sim.bottom_fric_gt,
+                                    rotation=rotation,
+                                    offset=offset)
+        action = sim.sample_action(composite_body_gt)
+        world = sim.make_world(composite_body_gt, action, verbose=-1)
+        recorder = None
+        # recorder = Recorder(DT, screen)
+        ground_truth_pos = sim.positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+        ground_truth_pos = [p.data for p in ground_truth_pos]
+        ground_truth_pos = torch.cat(ground_truth_pos)
+
+        batch_gt_pos.append(ground_truth_pos)
+        batch_actions.append(action)
 
     mass_err_hist = []
     for i in range(max_iter):
@@ -109,24 +118,28 @@ def sys_id_demo(screen):
         plot_mass_error(sim.obj_mask, sim.mass_gt, 
                         sim.mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
 
-        # run estimation
-        composite_body_est = sim.init_composite_object(
-                                    sim.particle_pos0,
-                                    sim.particle_radius, 
-                                    sim.mass_est,
-                                    sim.bottom_fric_gt,
-                                    rotation=rotation,
-                                    offset=offset)
-        world = sim.make_world(composite_body_est, action, verbose=-1)
-        recorder = None
-        # recorder = Recorder(DT, screen)
-        estimated_pos = sim.positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-        estimated_pos = torch.cat(estimated_pos)
-        estimated_pos = estimated_pos[:len(ground_truth_pos)]
-        clipped_ground_truth_pos = ground_truth_pos[:len(estimated_pos)]
-
+        loss = 0
         optim.zero_grad()
-        loss = MSELoss()(estimated_pos, clipped_ground_truth_pos)
+        for b in range(batch_size):
+            # run estimation
+            composite_body_est = sim.init_composite_object(
+                                        sim.particle_pos0,
+                                        sim.particle_radius, 
+                                        sim.mass_est,
+                                        sim.bottom_fric_gt,
+                                        rotation=rotation,
+                                        offset=offset)
+            action, ground_truth_pos = batch_actions[b], batch_gt_pos[b]
+            world = sim.make_world(composite_body_est, action, verbose=-1)
+            recorder = None
+            # recorder = Recorder(DT, screen)
+            estimated_pos = sim.positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+            estimated_pos = torch.cat(estimated_pos)
+            estimated_pos = estimated_pos[:len(ground_truth_pos)]
+            clipped_ground_truth_pos = ground_truth_pos[:len(estimated_pos)]
+
+            loss += MSELoss()(estimated_pos, clipped_ground_truth_pos)
+
         loss.backward()
 
         optim.step()

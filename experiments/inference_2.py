@@ -13,7 +13,7 @@ from lcp_physics.physics.constraints import Joint
 from lcp_physics.physics.utils import Recorder, plot, Defaults
 
 
-TIME = 40
+TIME = 10
 DT = Defaults.DT
 DTYPE = Defaults.DTYPE
 
@@ -22,15 +22,16 @@ MASS_EPS = 1e-7
 TOTAL_MASS = 7
 NUM_LINKS = 10
 
+torch.random.manual_seed(3)
 
 def main(screen):
     forces = [hor_impulse]
-    ground_truth_mass = torch.tensor([TOTAL_MASS], dtype=DTYPE)
+    ground_truth_mass = torch.tensor([[2], [5]], dtype=DTYPE)
     world, chain = make_world(forces, ground_truth_mass, num_links=NUM_LINKS)
 
     rec = None
     # rec = Recorder(DT, screen)
-    ground_truth_pos = positions_run_world(world, run_time=10, screen=screen, recorder=rec)
+    ground_truth_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=rec)
     ground_truth_pos = [p.data for p in ground_truth_pos]
     ground_truth_pos = torch.cat(ground_truth_pos)
 
@@ -38,20 +39,20 @@ def main(screen):
     max_iter = 100
 
     next_mass = torch.rand_like(ground_truth_mass, requires_grad=True)
-    print('\rInitial mass:', next_mass.item())
+    print('\rInitial mass:', next_mass.detach().numpy().reshape(-1))
     print('-----')
 
     optim = torch.optim.RMSprop([next_mass], lr=learning_rate)
     loss_hist = []
-    mass_hist = [next_mass.item()]
+    mass_hist = [next_mass.detach().numpy().reshape(-1)]
     last_loss = 1e10
     for i in range(max_iter):
         if i % 1 == 0:
             world, chain = make_world(forces, next_mass.clone().detach(), num_links=NUM_LINKS)
-            run_world(world, run_time=10, print_time=False, screen=None, recorder=None)
+            run_world(world, run_time=TIME, print_time=False, screen=None, recorder=None)
 
         world, chain = make_world(forces, next_mass, num_links=NUM_LINKS)
-        positions = positions_run_world(world, run_time=10, screen=None)
+        positions = positions_run_world(world, run_time=TIME, screen=screen)
         positions = torch.cat(positions)
         positions = positions[:len(ground_truth_pos)]
         clipped_ground_truth_pos = ground_truth_pos[:len(positions)]
@@ -64,8 +65,8 @@ def main(screen):
 
         print('Iteration: {} / {}'.format(i+1, max_iter))
         print('Loss:', loss.item())
-        print('Gradient:', next_mass.grad.item())
-        print('Next mass:', next_mass.item())
+        print('Gradient:', next_mass.grad.data)
+        print('Next mass:', next_mass.detach().numpy().reshape(-1))
         print('-----')
         if abs((last_loss - loss).item()) < STOP_DIFF:
             print('Loss changed by less than {} between iterations, stopping training.'
@@ -73,17 +74,17 @@ def main(screen):
             break
         last_loss = loss
         loss_hist.append(loss.item())
-        mass_hist.append(next_mass.item())
+        mass_hist.append(next_mass.clone().detach().numpy().reshape(-1))
 
     world = make_world(forces, next_mass, num_links=NUM_LINKS)[0]
     rec = None
-    positions = positions_run_world(world, run_time=10, screen=screen, recorder=rec)
+    positions = positions_run_world(world, run_time=TIME, screen=screen, recorder=rec)
     positions = torch.cat(positions)
     positions = positions[:len(ground_truth_pos)]
     clipped_ground_truth_pos = ground_truth_pos[:len(positions)]
     loss = MSELoss()(positions, clipped_ground_truth_pos)
     print('Final loss:', loss.item())
-    print('Final mass:', next_mass.item())
+    print('Final mass:', next_mass.detach().numpy().reshape(-1))
 
     plot(loss_hist)
     plot(mass_hist)
@@ -101,15 +102,16 @@ def make_world(forces, mass, num_links=10):
     joints = []
 
     # make chain of rectangles
-    link_mass = mass / num_links
-    r = Rect([300, 50], [20, 60], mass=link_mass)
+    link_mass_1 = mass[0] / num_links / 2
+    link_mass_2 = mass[1] / num_links / 2
+    r = Rect([300, 50], [20, 60], mass=link_mass_1)
     bodies.append(r)
     joints.append(Joint(r, None, [300, 30]))
     for i in range(1, num_links):
-        if i < num_links - 1:
-            r = Rect([300, 50 + 50 * i], [20, 60], mass=link_mass)
+        if i < num_links / 2:
+            r = Rect([300, 50 + 50 * i], [20, 60], mass=link_mass_1)
         else:
-            r = Rect([300, 50 + 50 * i], [20, 60], mass=link_mass)
+            r = Rect([300, 50 + 50 * i], [20, 60], mass=link_mass_2)
         r.add_force(Gravity(g=100))
         bodies.append(r)
         joints.append(Joint(bodies[-1], bodies[-2], [300, 25 + 50 * i]))
