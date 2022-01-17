@@ -151,6 +151,6 @@ class PdipmEngine():
             M = M.unsqueeze(0)
             v = v.unsqueeze(0)
             F = Jc.new_zeros(Jc.size(1), Jc.size(1)).unsqueeze(0)
-            x = self.lcp_solver()(M, h, Jc, v, Je, b, F)
+            x = self.lcp_solver.apply(M, h, Jc, v, Je, b, F, self.lcp_options)
         dp = -x[:M.size(0)]
         return dp

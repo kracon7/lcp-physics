@@ -259,4 +259,49 @@ class SimSingle():
         X = composite_body.get_particle_pos()
         return X
 
+    def positions_run_world(self, world, dt=Defaults.DT, run_time=10,
+                        screen=None, recorder=None):
+        '''
+        run world while recording particle positions at every step
+        '''
+        positions = [torch.cat([b.p for b in world.bodies])]
+
+        if screen is not None:
+            background = pygame.Surface(screen.get_size())
+            background = background.convert()
+            background.fill((255, 255, 255))
+
+            animation_dt = dt
+            elapsed_time = 0.
+            prev_frame_time = -animation_dt
+            start_time = time.time()
+
+        while world.t < run_time:
+            world.step()
+            positions.append(torch.cat([b.p for b in world.bodies]))
+
+            if screen is not None:
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        return
+
+                if elapsed_time - prev_frame_time >= animation_dt or recorder:
+                    prev_frame_time = elapsed_time
+
+                    screen.blit(background, (0, 0))
+                    update_list = []
+                    for body in world.bodies:
+                        update_list += body.draw(screen)
+                    for joint in world.joints:
+                        update_list += joint[0].draw(screen)
+
+                    if not recorder:
+                        # Don't refresh screen if recording
+                        pygame.display.update(update_list)
+                    else:
+                        recorder.record(world.t)
+
+                elapsed_time = time.time() - start_time
+    
+        return positions
 
