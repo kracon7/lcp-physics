@@ -6,7 +6,7 @@ Regress mass with lcp-physics
 
 import os
 import sys
-
+import pickle
 import time
 import cv2
 import pygame
@@ -163,7 +163,8 @@ def main(screen):
 
         batch_gt_pos.append(ground_truth_pos)
 
-    mass_err_hist = []
+    mass_est_hist = []
+    mass_est_hist.append(mass_est.clone().detach().numpy())
     for i in range(max_iter):
 
         plot_mass_error(mass_gt, mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
@@ -197,13 +198,14 @@ def main(screen):
         last_loss = loss
         loss_hist.append(loss.item())
 
-        # with torch.no_grad():
-        #     sim.mass_est.clamp_(min=1e-5)
-
         reset_screen(screen)
+
+        mass_est_hist.append(mass_est.clone().detach().numpy())
 
     plot(loss_hist)
 
+    with open('mass_est_hist.pkl', 'wb') as f:
+	    pickle.dump(mass_est_hist, f)
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':
