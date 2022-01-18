@@ -229,36 +229,6 @@ class SimSingle():
 
         return rotation, offset, action, X1, X2
 
-    def run_episode_gt(self, action, rotation, offset, 
-                             t=10, verbose=-1, screen=None, recorder=None):
-        composite_body_gt = self.init_composite_object(
-                                    self.particle_pos0,
-                                    self.particle_radius, 
-                                    self.mass_gt,
-                                    self.bottom_fric_gt,
-                                    rotation=rotation,
-                                    offset=offset)
-        world = self.make_world(composite_body_gt, action, verbose)
-        recorder = None
-        # recorder = Recorder(DT, screen)
-        run_world(world, run_time=t, screen=screen, recorder=recorder)
-        X = composite_body_gt.get_particle_pos()
-        return X
-
-    def run_episode_est(self, action, rotation, offset, 
-                             t=10, verbose=-1, screen=None, recorder=None):
-        composite_body = self.init_composite_object(
-                                    self.particle_pos0,
-                                    self.particle_radius, 
-                                    self.mass_est,
-                                    self.bottom_fric_gt,
-                                    rotation=rotation,
-                                    offset=offset)
-        world = self.make_world(composite_body, action, verbose)
-        run_world(world, run_time=t, screen=screen, recorder=recorder)
-        X = composite_body.get_particle_pos()
-        return X
-
     def positions_run_world(self, world, dt=Defaults.DT, run_time=10,
                         screen=None, recorder=None):
         '''

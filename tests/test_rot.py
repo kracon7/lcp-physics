@@ -26,17 +26,18 @@ from lcp_physics.physics.action import build_mesh, random_action
 from lcp_physics.physics.sim import SimSingle
 
 
-TIME = 2
+TIME = 5
 STOP_DIFF = 1e-3
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
 DTYPE = Defaults.DTYPE
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-NUM_P = 12
+NUM_P = 1
 P_RADIUS = 10
 
 np.random.seed(10)
-torch.random.manual_seed(10)
+torch.random.manual_seed(0)
+
 
 def make_world(mass, rot_center):
     particle_pos = torch.stack([torch.zeros(NUM_P), 
@@ -47,14 +48,13 @@ def make_world(mass, rot_center):
     joints = []
     N = particle_pos.shape[0]
 
-    center = Circle(rot_center, 1, mass=0.01)
+    center = Circle(rot_center, 1, mass=0.1)
     bodies.append(center)
     joints.append(Joint(center, None, rot_center))
 
     for i in range(N):
-        m = mass[i // int(N/3)]
-        c = Rect(particle_pos[i], [2*P_RADIUS, 2*P_RADIUS], mass=m, fric_coeff_s=0, 
-                    fric_coeff_b=[0.0, 0.1])
+        c = Rect(particle_pos[i], [2*P_RADIUS, 2*P_RADIUS], mass=0.1, fric_coeff_s=0, 
+                    fric_coeff_b=[0., 0.0])
         bodies.append(c)
         joints += [FixedJoint(c, center)]
 
@@ -63,11 +63,11 @@ def make_world(mass, rot_center):
             bodies[i].add_no_contact(bodies[j])
 
     # init force and apply force
-    initial_force = torch.FloatTensor([5000, 0, 0]).type(DTYPE).to(DEVICE)
+    initial_force = torch.FloatTensor([50, 0, 0]).type(DTYPE).to(DEVICE)
     push_force = lambda t: initial_force if t < 0.5 else ExternalForce.ZEROS
     center.add_force(ExternalForce(push_force))
 
-    world = World(bodies, joints, extend=0, solver_type=1)
+    world = World(bodies, joints, extend=1, solver_type=1, strict_no_penetration=False)
     return world
 
 
@@ -112,24 +112,6 @@ def positions_run_world(world, dt=Defaults.DT, run_time=10,
 
     return positions
 
-def plot_mass_error(m1, m2, save_path=None):
-    err = (m1 - m2).reshape(1,-1)
-
-    ax = plt.subplot()
-    im = ax.imshow(err, vmin=-0.08, vmax=0.08, cmap='plasma')
-    # im = ax.imshow(err, cmap='plasma')
-
-    # create an axes on the right side of ax. The width of cax will be 5%
-    # of ax and the padding between cax and ax will be fixed at 0.05 inch.
-    divider = make_axes_locatable(ax)
-    cax = divider.append_axes("right", size="5%", pad=0.05)
-
-    plt.colorbar(im, cax=cax)
-    if save_path:
-        plt.savefig(save_path)
-
-    plt.clf()
-    ax.cla()
 
 def main(screen):
 
@@ -139,70 +121,16 @@ def main(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    mass_gt = torch.tensor([0.3, 0.2, 0.4]).type(DTYPE)
-    mass_est = torch.rand_like(mass_gt, requires_grad=True)
-    print(mass_est)
-    rot_centers = torch.tensor([[0, -10],[0,70],[0,150],[0,230]]).type(DTYPE) + torch.tensor([500, 300]).type(DTYPE)
+    mass_gt = torch.tensor([0.5, 1, 2]).type(DTYPE)
+    rot_center = torch.tensor([0, -30]).type(DTYPE) + torch.tensor([500, 300]).type(DTYPE)
     
-    learning_rate = 0.05
-    max_iter = 40
-    loss_hist = []
-    last_loss = 1e10
+    world = make_world(mass_gt, rot_center)
+    recorder = None
+    recorder = Recorder(DT, screen)
+    ground_truth_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+    ground_truth_pos = torch.stack(ground_truth_pos)
 
-    # setup optimizer
-    optim = torch.optim.Adam([mass_est], lr=learning_rate)
-
-    batch_size, batch_gt_pos = 4, []
-    for b in range(batch_size):
-        world = make_world(mass_gt, rot_centers[b])
-        recorder = None
-        # recorder = Recorder(DT, screen)
-        ground_truth_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-        ground_truth_pos = [p.data for p in ground_truth_pos]
-        ground_truth_pos = torch.cat(ground_truth_pos)
-
-        batch_gt_pos.append(ground_truth_pos)
-
-    mass_err_hist = []
-    for i in range(max_iter):
-
-        plot_mass_error(mass_gt, mass_est.detach().numpy(), 'tmp/mass_err_%03d.png'%i)
-
-        loss = 0
-        optim.zero_grad()
-        for b in range(batch_size):
-            world = make_world(mass_est, rot_centers[b])
-            recorder = None
-            # recorder = Recorder(DT, screen)
-            estimated_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-            estimated_pos = torch.cat(estimated_pos)
-            ground_truth_pos = batch_gt_pos[b]
-            estimated_pos = estimated_pos[:len(ground_truth_pos)]
-            clipped_ground_truth_pos = ground_truth_pos[:len(estimated_pos)]
-
-            loss += MSELoss()(estimated_pos, clipped_ground_truth_pos)
-
-        loss.backward()
-        optim.step()
-
-        print('Iteration: {} / {}'.format(i+1, max_iter))
-        print('Loss: ', loss.item())
-        print('Gradient: ', mass_est.grad)
-        print('Mass: ', mass_est.data)
-        print('-----')
-        if abs((last_loss - loss).item()) < STOP_DIFF:
-            print('Loss changed by less than {} between iterations, stopping training.'
-                  .format(STOP_DIFF))
-            break
-        last_loss = loss
-        loss_hist.append(loss.item())
-
-        # with torch.no_grad():
-        #     sim.mass_est.clamp_(min=1e-5)
-
-        reset_screen(screen)
-
-    plot(loss_hist)
+    a=1
 
 
 if __name__ == '__main__':
