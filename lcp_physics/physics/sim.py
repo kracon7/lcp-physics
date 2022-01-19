@@ -103,7 +103,7 @@ class SimSingle():
         # offset = np.random.uniform(low=[450, 250], high=[550, 350], size=(batch_size, 2))
         return rotation.type(Defaults.DTYPE), offset.type(Defaults.DTYPE)
 
-    def sample_action(self, composite_body):
+    def sample_action(self, composite_body, batch_size=1):
         # get composite object particle pos
         p = composite_body.get_particle_pos()
         if p.shape[0] == 1:
@@ -116,25 +116,31 @@ class SimSingle():
 
         # randomly select the vertex and normal
         N = self.polygon.shape[0]
-        idx = np.random.choice(N)
-        vtx, nml = self.polygon_coord[idx], self.normals[idx]
-        # print(nml)
+        idx = np.random.choice(N, size=batch_size, replace=False)
+        action = []
+        for i in idx:
+            vtx, nml = self.polygon_coord[i], self.normals[i]
+            # print(nml)
 
-        # # add 15 degree randomness to the normal direction
-        # theta = np.random.uniform(-1/12*np.pi, 1/12*np.pi)
-        # nml = np.array([[np.cos(theta), -np.sin(theta)],
-        #                 [np.sin(theta),  np.cos(theta)]]) @ nml
-        # print(nml)
+            # # add 15 degree randomness to the normal direction
+            # theta = np.random.uniform(-1/12*np.pi, 1/12*np.pi)
+            # nml = np.array([[np.cos(theta), -np.sin(theta)],
+            #                 [np.sin(theta),  np.cos(theta)]]) @ nml
+            # print(nml)
         
-        start_pos = vtx + self.hand_radius * nml
+            start_pos = vtx + self.hand_radius * nml
 
-        while self.overlap_check(self.polygon_coord, 0.1*self.particle_radius, 
-                                 start_pos, self.hand_radius):
-            start_pos += 0.5 * nml
+            while self.overlap_check(self.polygon_coord, 0.1*self.particle_radius, 
+                                     start_pos, self.hand_radius):
+                start_pos += 0.5 * nml
 
-        start_pos = rotation_matrix @ start_pos + offset
-        nml = rotation_matrix @ nml
-        action = [start_pos, -nml]
+            start_pos = rotation_matrix @ start_pos + offset
+            nml = rotation_matrix @ nml
+            action.append([start_pos, -nml])
+
+        # making it compatible with earlier testing scripts
+        if batch_size == 1:
+            action = action[0]
 
         return action
 
@@ -175,7 +181,7 @@ class SimSingle():
 
         return particle_pose
 
-    def make_world(self, composite_body, action, verbose=0, strict_no_pen=True):
+    def make_world(self, composite_body, action, extend=1, solver_type=1, verbose=0, strict_no_pen=True):
         bodies = []
         joints = []
         bodies += composite_body.bodies
@@ -192,8 +198,8 @@ class SimSingle():
         c1.add_force(ExternalForce(push_force))
         
         # init world
-        world = World(bodies, joints, dt=Defaults.DT, verbose=verbose, extend=1, solver_type=1,
-                    strict_no_penetration=strict_no_pen)
+        world = World(bodies, joints, dt=Defaults.DT, verbose=verbose, extend=extend, 
+                solver_type=solver_type, strict_no_penetration=strict_no_pen)
 
         return world
 
