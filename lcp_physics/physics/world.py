@@ -1,5 +1,4 @@
 import time
-from functools import lru_cache
 
 import ode
 import torch
@@ -86,6 +85,9 @@ class World:
         start_rot_joints = [(j[0].rot1, j[0].rot2) for j in self.joints]
         new_v = self.engine.solve_dynamics(self, dt)
         self.set_v(new_v)
+
+        cnt = 0
+
         while True:
             # try step with current dt
             for body in self.bodies:
@@ -99,6 +101,9 @@ class World:
                 if not self.strict_no_pen and dt < self.dt / 4:
                     # if step becomes too small, just continue
                     break
+                
+                cnt += 1
+
                 dt /= 2
                 # reset positions to beginning of step
                 # XXX Clones necessary?
@@ -106,6 +111,9 @@ class World:
                 for j, c in zip(self.joints, start_rot_joints):
                     j[0].rot1 = c[0].clone()
                     j[0].update_pos()
+
+        if cnt > 0:
+            print('Number of time step reductions %d'%cnt)
 
         if self.post_stab:
             tmp_v = self.v
@@ -173,9 +181,9 @@ class World:
     def Jc(self):
         Jc = self._M.new_zeros(len(self.contacts), self.vec_len * len(self.bodies))
         for i, contact in enumerate(self.contacts):
-            c = contact[0]  # c = (normal, contact_pt_1, contact_pt_2)
-            i1 = contact[1]
-            i2 = contact[2]
+            c = contact[0]   # c = (normal, contact_pt_1, contact_pt_2)
+            i1 = contact[1]  # body 1 index
+            i2 = contact[2]  # body 2 index
             J1 = torch.cat([cross_2d(c[1], c[0]).reshape(1, 1),
                             c[0].unsqueeze(0)], dim=1)
             J2 = -torch.cat([cross_2d(c[2], c[0]).reshape(1, 1),
@@ -184,8 +192,8 @@ class World:
             Jc[i, i2 * self.vec_len:(i2 + 1) * self.vec_len] = J2
         return Jc
 
-    def Jf(self):
-        Jf = self._M.new_zeros(len(self.contacts) * self.fric_dirs,
+    def Js(self):
+        Js = self._M.new_zeros(len(self.contacts) * self.fric_dirs,
                                self.vec_len * len(self.bodies))
         for i, contact in enumerate(self.contacts):
             c = contact[0]  # c = (normal, contact_pt_1, contact_pt_2)
@@ -205,24 +213,60 @@ class World:
                 torch.cat([cross_2d(c[2], dir2).reshape(1, 1),
                            dir2.unsqueeze(0)], dim=1),
             ], dim=0)
-            Jf[i * self.fric_dirs:(i + 1) * self.fric_dirs,
+            Js[i * self.fric_dirs:(i + 1) * self.fric_dirs,
             i1 * self.vec_len:(i1 + 1) * self.vec_len] = J1
-            Jf[i * self.fric_dirs:(i + 1) * self.fric_dirs,
+            Js[i * self.fric_dirs:(i + 1) * self.fric_dirs,
             i2 * self.vec_len:(i2 + 1) * self.vec_len] = -J2
-        return Jf
+        return Js
 
-    def mu(self):
-        return self._memoized_mu(*[(c[1], c[2]) for c in self.contacts])
+    def Jb(self):
+        '''
+        Jacobian matrix for bottom friction
+        '''
+        Jb = self._M.new_zeros(2*len(self.bodies), 3*len(self.bodies))
+        v = self.get_v()
 
-    def _memoized_mu(self, *contacts):
+        for i, b in enumerate(self.bodies):
+            vi = v[i*3 : (i+1)*3]
+            if torch.norm(vi[1:]) == 0:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        self._M.new_zeros(3)
+                     ])
+            else:
+                Ji = torch.stack([
+                        torch.cat([-torch.sign(vi[0]).unsqueeze(0), self._M.new_zeros(2)]),
+                        torch.cat([self._M.new_zeros(1), -vi[1:] / torch.norm(vi[1:])])
+                     ])
+            Jb[2*i:2*(i+1), 3*i:3*(i+1)] = Ji
+        return Jb
+
+
+    def mu_s(self):
+        return self._memoized_mu_s(*[(c[1], c[2]) for c in self.contacts])
+
+    def _memoized_mu_s(self, *contacts):
         # contacts is argument so that cacheing can be implemented at some point
-        mu = self._M.new_zeros(len(self.contacts))
+        mu_s = self._M.new_zeros(len(self.contacts))
         for i, contacts in enumerate(self.contacts):
             i1 = contacts[1]
             i2 = contacts[2]
-            # mu[i] = torch.sqrt(self.bodies[i1].fric_coeff * self.bodies[i2].fric_coeff)
-            mu[i] = 0.5 * (self.bodies[i1].fric_coeff + self.bodies[i2].fric_coeff)
-        return torch.diag(mu)
+            mu_s[i] = 0.5 * (self.bodies[i1].fric_coeff_s + self.bodies[i2].fric_coeff_s)
+        return torch.diag(mu_s)
+
+    def mu_b(self):
+        mu_b = self._M.new_zeros(2*len(self.bodies))
+        for i, b in enumerate(self.bodies):
+            mu_b[2*i:2*(i+1)] = torch.stack([b.fric_coeff_b[0], 
+                                             b.fric_coeff_b[1]])
+        return mu_b
+
+    def mu_b_diag_M(self):
+        result = self._M.new_zeros(2*len(self.bodies))
+        for i, b in enumerate(self.bodies):
+            result[2*i:2*(i+1)] = torch.stack([b.fric_coeff_b[0] * b.M[0,0], 
+                                               b.fric_coeff_b[1] * b.M[1,1]])
+        return result
 
     def E(self):
         return self._memoized_E(len(self.contacts))

@@ -1,11 +1,15 @@
+from collections import defaultdict
 import math
 
 import ode
 import pygame
+import scipy.spatial as spatial
+import numpy as np
 
 import torch
 
 from .utils import Indices, Defaults, get_tensor, cross_2d, rotation_matrix
+from .constraints import FixedJoint
 
 X = Indices.X
 Y = Indices.Y
@@ -16,8 +20,8 @@ class Body(object):
     """Base class for bodies.
     """
     def __init__(self, pos, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         # get base tensor to define dtype, device and layout for others
         self._set_base_tensor(locals().values())
 
@@ -46,7 +50,8 @@ class Body(object):
         self.M[:ang_sizes[0], :ang_sizes[1]] = self.ang_inertia
         self.M[ang_sizes[0]:, ang_sizes[1]:] = torch.eye(DIM).type_as(self.M) * self.mass
 
-        self.fric_coeff = get_tensor(fric_coeff, base_tensor=self._base_tensor)
+        self.fric_coeff_s = get_tensor(fric_coeff_s, base_tensor=self._base_tensor)
+        self.fric_coeff_b = get_tensor(fric_coeff_b, base_tensor=self._base_tensor)
         self.restitution = get_tensor(restitution, base_tensor=self._base_tensor)
         self.forces = []
 
@@ -115,15 +120,16 @@ class Body(object):
 
 class Circle(Body):
     def __init__(self, pos, rad, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.rad = get_tensor(rad, base_tensor=self._base_tensor)
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b,
+                         eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
-        return mass * self.rad * self.rad / 2
+        return mass / 2 * self.rad * self.rad
 
     def _create_geom(self):
         self.geom = ode.GeomSphere(None, self.rad.item() + self.eps.item())
@@ -137,17 +143,24 @@ class Circle(Body):
     def set_p(self, new_p, update_geom_rotation=False):
         super().set_p(new_p, update_geom_rotation=update_geom_rotation)
 
-    def draw(self, screen, pixels_per_meter=1):
-        center = (self.pos.detach().numpy() * pixels_per_meter).astype(int)
+    def draw(self, screen, pixels_per_meter=1, show_mass=True):
+        center = (self.pos.detach().cpu().numpy() * pixels_per_meter).astype(int)
         rad = int(self.rad.item() * pixels_per_meter)
+        if show_mass:
+            thickness = 0
+            col = (max(0, min(255, int(self.mass.item() * 1e3))), 
+                   0, 0)
+        else:
+            thickness = self.thickness
+            col = (255, 0, 0)
+
         # draw radius to visualize orientation
         r = pygame.draw.line(screen, (0, 0, 255), center,
                              center + [math.cos(self.rot.item()) * rad,
                                        math.sin(self.rot.item()) * rad],
                              self.thickness)
         # draw circle
-        c = pygame.draw.circle(screen, self.col, center,
-                               rad, self.thickness)
+        c = pygame.draw.circle(screen, col, center, rad, thickness)
         return [c, r]
 
 
@@ -160,8 +173,8 @@ class Hull(Body):
        centroid's frame. Object position is set to centroid.
     """
     def __init__(self, ref_point, vertices, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         ref_point = get_tensor(ref_point, base_tensor=self._base_tensor)
         # center vertices around centroid
@@ -174,7 +187,8 @@ class Hull(Body):
         # store last separating edge for SAT
         self.last_sat_idx = 0
         super().__init__(pos, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s,  fric_coeff_b=fric_coeff_b,
+                         eps=eps, col=col, thickness=thickness)
 
     def _get_ang_inertia(self, mass):
         numerator = 0
@@ -252,8 +266,8 @@ class Hull(Body):
 
 class Rect(Hull):
     def __init__(self, pos, dims, vel=(0, 0, 0), mass=1, restitution=Defaults.RESTITUTION,
-                 fric_coeff=Defaults.FRIC_COEFF, eps=Defaults.EPSILON,
-                 col=(255, 0, 0), thickness=1):
+                 fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B, 
+                 eps=Defaults.EPSILON, col=(255, 0, 0), thickness=1):
         self._set_base_tensor(locals().values())
         self.dims = get_tensor(dims, base_tensor=self._base_tensor)
         pos = get_tensor(pos, base_tensor=self._base_tensor)
@@ -262,12 +276,13 @@ class Rect(Hull):
         verts = [v0, v1, -v0, -v1]
         ref_point = pos[-2:]
         super().__init__(ref_point, verts, vel=vel, mass=mass, restitution=restitution,
-                         fric_coeff=fric_coeff, eps=eps, col=col, thickness=thickness)
+                         fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b,
+                          eps=eps, col=col, thickness=thickness)
         if pos.size(0) == 3:
             self.set_p(pos)
 
     def _get_ang_inertia(self, mass):
-        return mass * torch.sum(self.dims ** 2) / 12
+        return mass * torch.sum(self.dims ** 2) / 12 / (self.dims[0] * self.dims[1])
 
     def _create_geom(self):
         self.geom = ode.GeomBox(None, torch.cat([self.dims + 2 * self.eps.item(),
@@ -299,3 +314,139 @@ class Rect(Hull):
         p = super().draw(screen, pixels_per_meter=pixels_per_meter,
                          draw_center=False)
         return [l1, l2] + p
+
+
+class Composite():
+    """rigid body based on particle formulation"""
+    def __init__(self, particle_pos, radius, mass=0.01, 
+                fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B):
+        '''
+        Input:
+            particle_pos -- ndarray (N, 2) 2D position of particles
+            radius -- radius of each particle
+            mass -- float or ndarray (N,), mass of each particle
+            fric_coeff_s -- side friction coefficient
+            fric_coeff_b -- bottom friction coefficient
+        '''
+        # super(ClassName, self).__init__()
+        # self.args = args
+
+        bodies = []
+        joints = []
+        N = particle_pos.shape[0]
+        if isinstance(mass, float):
+            mass = mass * np.ones(N)
+
+        if isinstance(fric_coeff_b, list):
+            fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
+
+        for i in range(N):
+            c = Circle(particle_pos[i], radius, mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b[i])
+
+            bodies.append(c)
+
+        for i in range(N-1):
+            joints += [FixedJoint(bodies[i], bodies[-1])]
+
+        # add contact exclusion
+        no_contact = self.find_neighbors(particle_pos, radius)
+        for i in range(N):
+            neighbors = no_contact[i]
+            for j in neighbors:
+                bodies[i].add_no_contact(bodies[j])
+
+        self.bodies = bodies
+        self.joints = joints
+        self.radius = radius
+        self.mass = mass
+        self.fric_coeff_b = fric_coeff_b
+
+    def get_particle_pos(self):
+        pos = []
+        for b in self.bodies:
+            pos.append(b.pos)
+        pos = torch.stack(pos)
+        return pos
+
+    def find_neighbors(self, particle_pos, radius):
+        '''
+        find neighbors of particles for contact exlusion
+        '''
+        point_tree = spatial.cKDTree(particle_pos)
+        neighbors_list = point_tree.query_ball_point(particle_pos, 2.5*radius)
+
+        no_contact = defaultdict(list)
+        for i in range(particle_pos.shape[0]):
+            neighbors = neighbors_list[i]
+            neighbors.remove(i)
+            no_contact[i] = neighbors
+
+        return no_contact
+
+
+class CompositeSquare():
+    """rigid body based on cuboid formulation"""
+    def __init__(self, particle_pos, dim, mass=0.01, 
+                fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B):
+        '''
+        Input:
+            particle_pos -- ndarray (N, 2) 2D position of particles
+            dim -- half of the side length of each square particle
+            mass -- float or ndarray (N,), mass of each particle
+            fric_coeff_s -- side friction coefficient
+            fric_coeff_b -- bottom friction coefficient
+        '''
+
+        bodies = []
+        joints = []
+        N = particle_pos.shape[0]
+        if isinstance(mass, float):
+            mass = mass * np.ones(N)
+
+        if isinstance(fric_coeff_b, list):
+            fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
+
+        for i in range(N):
+            c = Rect(particle_pos[i], [2*dim, 2*dim], mass=mass[i], 
+                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b[i])
+
+            bodies.append(c)
+
+        for i in range(N-1):
+            joints += [FixedJoint(bodies[i], bodies[-1])]
+
+        # add contact exclusion
+        no_contact = self.find_neighbors(particle_pos, dim)
+        for i in range(N):
+            neighbors = no_contact[i]
+            for j in neighbors:
+                bodies[i].add_no_contact(bodies[j])
+
+        self.bodies = bodies
+        self.joints = joints
+        self.dim = dim
+        self.mass = mass
+        self.fric_coeff_b = fric_coeff_b
+
+    def get_particle_pos(self):
+        pos = []
+        for b in self.bodies:
+            pos.append(b.pos)
+        pos = torch.stack(pos)
+        return pos
+
+    def find_neighbors(self, particle_pos, radius):
+        '''
+        find neighbors of particles for contact exlusion
+        '''
+        point_tree = spatial.cKDTree(particle_pos)
+        neighbors_list = point_tree.query_ball_point(particle_pos, 4*radius)
+
+        no_contact = defaultdict(list)
+        for i in range(particle_pos.shape[0]):
+            neighbors = neighbors_list[i]
+            neighbors.remove(i)
+            no_contact[i] = neighbors
+
+        return no_contact

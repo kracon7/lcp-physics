@@ -48,7 +48,7 @@ def make_world(mass, force):
     push_force = lambda t: force if t < 0.5 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(push_force))
 
-    world = World(bodies, joints)
+    world = World(bodies, joints, extend=0)
     return world
 
 
@@ -90,10 +90,8 @@ def positions_run_world(world, dt=Defaults.DT, run_time=10,
                     pygame.display.update(update_list)
                 else:
                     recorder.record(world.t)
-
             elapsed_time = time.time() - start_time
-            # print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
-            #                                   1 / animation_dt), end='')
+            
     return positions
 
 def main(screen):
