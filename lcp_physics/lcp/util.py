@@ -93,3 +93,11 @@ def efficient_btriunpack(LU_data, LU_pivots, unpack_data=True, unpack_pivots=Tru
         P = None
 
     return P, L, U
+
+
+def print_array(A, column_width=10, percision=3):
+    np.set_printoptions(suppress=True)
+    A = A.tolist()
+    setting_str = '{:' + '{}.{}f'.format(column_width, percision) + '}'
+    print('\n'.join([''.join([setting_str.format(item) for item in row]) 
+      for row in A]))

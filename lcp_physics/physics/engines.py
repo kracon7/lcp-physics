@@ -5,7 +5,7 @@ Based on: M. B. Cline, Rigid body simulation with contact and constraints, 2002
 
 import torch
 
-from lcp_physics.lcp.lcp import LCPFunction
+from lcp_physics.lcp.lcp import LCPFunction, LCPOptions
 
 
 class Engine:
@@ -17,7 +17,11 @@ class Engine:
 class PdipmEngine(Engine):
     """Engine that uses the primal dual interior point method LCP solver.
     """
-    def __init__(self, max_iter=10):
+    def __init__(self, max_iter, verbose, extend, solver_type):
+        self.lcp_options = LCPOptions(max_iter=max_iter, 
+                                      verbose=verbose, 
+                                      extend=extend, 
+                                      solver_type=solver_type)
         self.lcp_solver = LCPFunction
         self.cached_inverse = None
         self.max_iter = max_iter
@@ -73,7 +77,7 @@ class PdipmEngine(Engine):
                 -E.transpose(1, 2)
             h = torch.cat([v, v.new_zeros(v.size(0), Jf.size(1) + mu.size(1))], 1)
 
-            x = -self.lcp_solver(max_iter=self.max_iter, verbose=-1)(M, u, G, h, Je, b, F)
+            x = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
         return new_v
 
@@ -111,6 +115,6 @@ class PdipmEngine(Engine):
             M = M.unsqueeze(0)
             v = v.unsqueeze(0)
             F = Jc.new_zeros(Jc.size(1), Jc.size(1)).unsqueeze(0)
-            x = self.lcp_solver()(M, h, Jc, v, Je, b, F)
+            x = self.lcp_solver.apply(M, h, Jc, v, Je, b, F, self.lcp_options)
         dp = -x[:M.size(0)]
         return dp

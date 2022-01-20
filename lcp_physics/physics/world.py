@@ -4,7 +4,7 @@ from functools import lru_cache
 import ode
 import torch
 
-from . import engines as engines_module
+from .engines import PdipmEngine
 from . import contacts as contacts_module
 from .utils import Indices, Defaults, cross_2d, get_instance, left_orthogonal
 
@@ -19,11 +19,12 @@ class World:
     def __init__(self, bodies, constraints=[], dt=Defaults.DT, engine=Defaults.ENGINE,
                  contact_callback=Defaults.CONTACT, eps=Defaults.EPSILON,
                  tol=Defaults.TOL, fric_dirs=Defaults.FRIC_DIRS,
-                 post_stab=Defaults.POST_STABILIZATION, strict_no_penetration=True):
+                 post_stab=Defaults.POST_STABILIZATION, strict_no_penetration=True,
+                 max_iter=10, verbose=0, extend=0, solver_type=1):
         # self.contacts_debug = None  # XXX
 
         # Load classes from string name defined in utils
-        self.engine = get_instance(engines_module, engine)
+        self.engine = PdipmEngine(max_iter, verbose, extend, solver_type)
         self.contact_callback = get_instance(contacts_module, contact_callback)
 
         self.t = 0
