@@ -401,8 +401,8 @@ class CompositeSquare():
         bodies = []
         joints = []
         N = particle_pos.shape[0]
-        if isinstance(mass, float):
-            mass = mass * np.ones(N)
+        if isinstance(mass, float) or (isinstance(mass, torch.Tensor) and mass.shape[0]==1):
+            mass = [mass for _ in range(N)]
 
         if isinstance(fric_coeff_b, list):
             fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
