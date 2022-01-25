@@ -181,7 +181,8 @@ class SimSingle():
 
         return particle_pose
 
-    def make_world(self, composite_body, action, extend=1, solver_type=1, verbose=0, strict_no_pen=True):
+    def make_world(self, composite_body, action, extend=0, solver_type=1, verbose=0, 
+                    strict_no_pen=True):
         bodies = []
         joints = []
         bodies += composite_body.bodies

@@ -304,16 +304,16 @@ class Rect(Hull):
         super().move(dt, update_geom_rotation=update_geom_rotation)
 
     def draw(self, screen, pixels_per_meter=1):
-        # draw diagonals
-        verts = [(v + self.pos).detach().cpu().numpy() * pixels_per_meter
-                 for v in self.verts]
-        l1 = pygame.draw.line(screen, (0, 0, 255), verts[0], verts[2])
-        l2 = pygame.draw.line(screen, (0, 0, 255), verts[1], verts[3])
+        # # draw diagonals
+        # verts = [(v + self.pos).detach().cpu().numpy() * pixels_per_meter
+        #          for v in self.verts]
+        # l1 = pygame.draw.line(screen, (0, 0, 255), verts[0], verts[2])
+        # l2 = pygame.draw.line(screen, (0, 0, 255), verts[1], verts[3])
 
         # draw rectangle
         p = super().draw(screen, pixels_per_meter=pixels_per_meter,
                          draw_center=False)
-        return [l1, l2] + p
+        return p
 
 
 class Composite():
