@@ -24,14 +24,11 @@ def make_world(particle_pos, particle_radius, hand):
     '''
     build world based on particle positions
     '''
-    bodies = []
-    joints = []
-    fric_coeff_s = 0.15
-
-    composite_body = Composite(particle_pos, particle_radius)
-    composite_body = CompositeSquare(particle_pos, particle_radius)
-    bodies += composite_body.bodies
-    joints += composite_body.joints
+    mass = torch.tensor([1]).double()
+    mass_mapping = [0 for _ in range(particle_pos.shape[0])]
+    composite_body = CompositeSquare(particle_pos, particle_radius, mass, mass_mapping)
+    bodies = composite_body.bodies
+    joints = composite_body.joints
 
     c = Circle(hand, 60)
     bodies.append(c)

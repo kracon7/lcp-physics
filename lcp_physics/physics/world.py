@@ -360,6 +360,6 @@ def run_world(world, animation_dt=None, run_time=10, print_time=True,
                 # elapsed_time = time.time() - start_time
 
         elapsed_time = time.time() - start_time
-        if print_time:
-            print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
-                                               1 / animation_dt), end='')
+        # if print_time:
+        #     print('\r ', '{} / {}  {} '.format(int(world.t), int(elapsed_time),
+        #                                        1 / animation_dt), end='')

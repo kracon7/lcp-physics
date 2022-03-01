@@ -387,8 +387,8 @@ class Composite():
 
 class CompositeSquare():
     """rigid body based on cuboid formulation"""
-    def __init__(self, particle_pos, dim, mass=0.01, 
-                fric_coeff_s=Defaults.FRIC_COEFF_S, fric_coeff_b=Defaults.FRIC_COEFF_B):
+    def __init__(self, particle_pos, dim, mass, mass_mapping, 
+                fric_coeff_s=Defaults.FRIC_COEFF_S):
         '''
         Input:
             particle_pos -- ndarray (N, 2) 2D position of particles
@@ -401,15 +401,10 @@ class CompositeSquare():
         bodies = []
         joints = []
         N = particle_pos.shape[0]
-        if isinstance(mass, float) or (isinstance(mass, torch.Tensor) and mass.shape[0]==1):
-            mass = [mass for _ in range(N)]
-
-        if isinstance(fric_coeff_b, list):
-            fric_coeff_b = np.ones((N, 2)) * np.array(fric_coeff_b)
 
         for i in range(N):
-            c = Rect(particle_pos[i], [2*dim, 2*dim], mass=mass[i], 
-                        fric_coeff_s=fric_coeff_s, fric_coeff_b=fric_coeff_b[i])
+            c = Rect(particle_pos[i], [2*dim, 2*dim], mass=mass[mass_mapping[i]], 
+                        fric_coeff_s=fric_coeff_s)
 
             bodies.append(c)
 
@@ -426,8 +421,6 @@ class CompositeSquare():
         self.bodies = bodies
         self.joints = joints
         self.dim = dim
-        self.mass = mass
-        self.fric_coeff_b = fric_coeff_b
 
     def get_particle_pos(self):
         pos = []
