@@ -73,10 +73,8 @@ def sys_id_demo(screen):
 
     sim = SimSingle.from_img(mass_img_path, bottom_fric_img_path, particle_radius=10, 
                     hand_radius=10)
-    sim.bottom_fric_est = sim.bottom_fric_gt
     sim.action_mag = default_actions[obj_name]['action_mag']
     sim.force_time = default_actions[obj_name]['force_time']
-    sim.mass_est = torch.rand_like(sim.mass_gt, requires_grad=True)
     
     learning_rate = 1e-2
     max_iter = 20

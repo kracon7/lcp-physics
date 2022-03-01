@@ -24,7 +24,7 @@ def make_world(particle_pos, particle_radius, hand):
     '''
     build world based on particle positions
     '''
-    mass = torch.tensor([1]).double()
+    mass = torch.tensor([0.01]).double()
     mass_mapping = [0 for _ in range(particle_pos.shape[0])]
     composite_body = CompositeSquare(particle_pos, particle_radius, mass, mass_mapping)
     bodies = composite_body.bodies
@@ -45,7 +45,7 @@ def make_world(particle_pos, particle_radius, hand):
     learned_force = lambda t: initial_force if t < 2 else ExternalForce.ZEROS
     c.add_force(ExternalForce(learned_force))
 
-    world = World(bodies, joints, dt=DT, extend=1, solver_type=1)
+    world = World(bodies, joints, dt=DT, extend=0, solver_type=1)
     return world
     
 

@@ -33,25 +33,13 @@ def image_to_pos(mass_img, particle_radius):
 
 
 class SimSingle():
-    def __init__(self, particle_pos0, particle_radius, hand_radius, mass_gt=None, 
-                mass_est=None, obj_mask=None,
-                DT = Defaults.DT, DEVICE = Defaults.DEVICE):
+    def __init__(self, particle_pos0, particle_radius, hand_radius, obj_mask, DT = Defaults.DT, 
+                    DEVICE = Defaults.DEVICE):
         
         self.particle_pos0 = get_tensor(particle_pos0)
         self.particle_radius = particle_radius
         self.N = self.particle_pos0.shape[0]
         self.DEVICE = DEVICE
-
-        if mass_gt is None:
-            self.mass_gt = 0.01 * torch.ones(self.N).to(DEVICE)
-        else:
-            self.mass_gt = get_tensor(mass_gt)
-
-        if mass_est is None:
-            self.mass_est = 0.05 * torch.ones(self.N).to(DEVICE)
-        else:
-            self.mass_est = get_tensor(mass_est)
-        self.mass_est = Variable(self.mass_est, requires_grad=True)
 
         self.hand_radius = hand_radius
         self.obj_mask = obj_mask
@@ -69,10 +57,7 @@ class SimSingle():
                     hand_radius=None):
         particle_pos0, mask = image_to_pos(mass_img_path, particle_radius)
     
-        mass_gt = image_to_mass(mass_img_path, mask)
-        bottom_fric_gt = image_to_bottom_fric(bottom_fric_img_path, mask)
-        return cls(particle_pos0, particle_radius, hand_radius, mass_gt=mass_gt, 
-                    bottom_fric_gt=bottom_fric_gt, obj_mask=mask)    
+        return cls(particle_pos0, particle_radius, hand_radius, obj_mask=mask)    
 
     def random_rest_composite_pose(self, batch_size=1):
         # randomly initialize rotation and offset
@@ -135,11 +120,10 @@ class SimSingle():
         else:
             return False
 
-    def init_composite_object(self, particle_pos, particle_radius, mass_profile, 
-                rotation=torch.tensor([0.]).double(), offset=torch.tensor([0.,0.]).double()):
+    def init_composite_object(self, mass, mass_mapping, rotation=torch.tensor([0.]).double(), 
+                                offset=torch.tensor([0.,0.]).double()):
         particle_pos = self.transform_particles(rotation, offset)
-
-        composite_body = CompositeSquare(particle_pos, particle_radius, mass=mass_profile)
+        composite_body = CompositeSquare(particle_pos, self.particle_radius, mass, mass_mapping)
         return composite_body
 
     def transform_particles(self, rotation=torch.tensor([0.]).double(), 
