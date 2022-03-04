@@ -1,5 +1,5 @@
 '''
-Test initial velocity with an applied torque
+Test mass inference with an applied torque
 '''
 
 import os
@@ -164,23 +164,30 @@ def sim_demo(screen):
     obj_name = 'hammer'
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
 
-    composite = CompositeSquare(mass_img_path, particle_radius=10)
-    N = composite.num_particle
+    composite_est = CompositeSquare(mass_img_path, particle_radius=10)
+    composite_gt = CompositeSquare(mass_img_path, particle_radius=10)
+    N = composite_est.num_particle
     
     # run ground truth to get ground truth trajectory
     rotation, translation = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
     
-    mass = torch.tensor([0.1]).double()
+    mass_est = torch.tensor([0.1]).double().requires_grad_()
+    mass_gt = torch.tensor([0.2]).double()
     mass_mapping = [0 for _ in range(N)]
     
     # initial velocity of composite body
-    init_vel = composite.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.2]).double())
+    init_vel = composite_gt.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.2]).double())
 
-    composite.initialize(rotation, translation, mass, mass_mapping, init_vel)
-    world = composite.make_world()
+    composite_est.initialize(rotation, translation, mass_est, mass_mapping, init_vel)
+    composite_gt.initialize(rotation, translation, mass_gt, mass_mapping, init_vel)
+    world_est = composite_est.make_world()
+    world_gt = composite_gt.make_world()
     recorder = None
     # recorder = Recorder(DT, screen)
-    estimated_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+    groun_truth_pos = positions_run_world(world_gt, run_time=TIME, screen=screen, recorder=recorder)
+    estimated_pos = positions_run_world(world_est, run_time=TIME, screen=screen, recorder=recorder)
+
+    
     
 
 if __name__ == '__main__':
