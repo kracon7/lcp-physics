@@ -41,14 +41,14 @@ def make_world(mass, force):
     c1 = Circle([500, 300], 20, mass=mass)
     bodies.append(c1)
 
-    ob = Rect([550, 300], [10, 200], mass=1)
-    bodies.append(ob)
-    joints.append(TotalConstraint(ob))
+    # ob = Rect([550, 300], [10, 200], mass=1)
+    # bodies.append(ob)
+    # joints.append(TotalConstraint(ob))
 
     push_force = lambda t: force if t < 0.5 else ExternalForce.ZEROS
     c1.add_force(ExternalForce(push_force))
 
-    world = World(bodies, joints, extend=0)
+    world = World(bodies, joints, extend=1)
     return world
 
 

@@ -108,6 +108,10 @@ def left_orthogonal(v):
     """
     return torch.stack([v[1], -v[0]])
 
+def right_orthogonal(v):
+    """Get the (right) orthogonal vector to the provided vector.
+    """
+    return torch.stack([-v[1], v[0]])
 
 def rotation_matrix(ang):
     """Get the rotation matrix for a specific angle.
