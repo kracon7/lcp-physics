@@ -83,7 +83,11 @@ class World:
     def step_dt(self, dt):
         start_p = torch.cat([b.p for b in self.bodies])
         start_rot_joints = [(j[0].rot1, j[0].rot2) for j in self.joints]
-        new_v = self.engine.solve_dynamics(self, dt)
+        new_v, x = self.engine.solve_dynamics(self, dt)
+
+        # save the constraint results
+        self.constraints = x
+
         self.set_v(new_v)
 
         cnt = 0

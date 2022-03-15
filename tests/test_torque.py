@@ -1,5 +1,5 @@
 '''
-Test rotation with an initial velocity
+Test fixed point rotation with an initial velocity and applied torque
 '''
 
 import os
@@ -19,10 +19,10 @@ from torch.nn import MSELoss
 from torch.autograd import Variable
 
 from lcp_physics.physics.bodies import Circle, Rect, Hull
-from lcp_physics.physics.constraints import TotalConstraint, FixedJoint
+from lcp_physics.physics.constraints import TotalConstraint, FixedJoint, Joint
 from lcp_physics.physics.forces import ExternalForce, Gravity, vert_impulse, hor_impulse
 from lcp_physics.physics.utils import Defaults, plot, reset_screen, Recorder, left_orthogonal, right_orthogonal
-from lcp_physics.physics.world import World, run_world, positions_run_world
+from lcp_physics.physics.world import World, run_world
 from lcp_physics.physics.action import build_mesh, random_action
 from lcp_physics.physics.sim import SimSingle
 
@@ -100,7 +100,7 @@ class CompositeSquare():
 
         return no_contact
 
-    def make_world(self, extend=1, solver_type=1, verbose=0, strict_no_pen=True):
+    def make_world(self, extend=0, solver_type=1, verbose=0, strict_no_pen=True):
         
         # init world
         world = World(self.bodies, self.joints, dt=Defaults.DT, verbose=verbose, extend=extend, 
@@ -135,7 +135,7 @@ class CompositeSquare():
 
         return particle_pose
 
-    def apply_torque(self, center, vel_w):
+    def get_init_vel(self, center, vel_w):
         """
         Compute particle velocity from the rotation center and angular velocity
         Args
@@ -152,6 +152,66 @@ class CompositeSquare():
         particle_vel = torch.stack(particle_vel)
         return particle_vel
 
+    def apply_torque(self, body_idx, magnitude):
+        """
+        Apply torque to a particle.
+        Args
+            body_idx -- body index to apply torque
+            magnitude -- magnitude of the torque
+        """
+        self.joints.append(Joint(self.bodies[body_idx], None, self.bodies[body_idx].pos.clone()))
+
+        initial_force = torch.tensor([magnitude, 0, 0]).double().to(DEVICE)
+        push_force = lambda t: initial_force if t < TIME else ExternalForce.ZEROS
+        self.bodies[body_idx].add_force(ExternalForce(push_force))
+
+
+def torque_run_world(world, dt=Defaults.DT, run_time=10, screen=None, recorder=None):
+    '''
+    run world while recording particle positions at every step
+    '''
+    constraints = []
+
+    if screen is not None:
+        import pygame
+        background = pygame.Surface(screen.get_size())
+        background = background.convert()
+        background.fill((255, 255, 255))
+
+        animation_dt = dt
+        elapsed_time = 0.
+        prev_frame_time = -animation_dt
+        start_time = time.time()
+
+    while world.t < run_time:
+        world.step()
+        constraints.append(world.constraints[-2:])
+
+        if screen is not None:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    return
+
+            if elapsed_time - prev_frame_time >= animation_dt or recorder:
+                prev_frame_time = elapsed_time
+
+                screen.blit(background, (0, 0))
+                update_list = []
+                for body in world.bodies:
+                    update_list += body.draw(screen)
+                for joint in world.joints:
+                    update_list += joint[0].draw(screen)
+
+                if not recorder:
+                    # Don't refresh screen if recording
+                    pygame.display.update(update_list)
+                else:
+                    recorder.record(world.t)
+
+            elapsed_time = time.time() - start_time
+
+    return constraints
+
 
 def sim_demo(screen):
 
@@ -166,22 +226,36 @@ def sim_demo(screen):
 
     composite = CompositeSquare(mass_img_path, particle_radius=10)
     N = composite.num_particle
-    
-    # run ground truth to get ground truth trajectory
     rotation, translation = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
     
     mass = torch.tensor([0.2]).double()
     mass_mapping = [0 for _ in range(N)]
     
     # initial velocity of composite body
-    init_vel = composite.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.5]).double())
+    init_vel = composite.get_init_vel(torch.tensor([0,0]).double(), torch.tensor([0]).double())
 
     composite.initialize(rotation, translation, mass, mass_mapping, init_vel)
+    composite.apply_torque(0, 5)
     world = composite.make_world()
     recorder = None
-    # recorder = Recorder(DT, screen)
-    estimated_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-    print(estimated_pos[-1])
+    recorder = Recorder(DT, screen)
+    constraints = torque_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
+
+    constraints = torch.stack(constraints).detach().numpy()
+    timesteps = constraints.shape[0]
+
+    fig, ax = plt.subplots(1,1)
+    for i in range(timesteps):
+        fx, = ax.plot(constraints[:i, 0], label='fx')
+        fy, = ax.plot(constraints[:i, 1], label='fy')
+        ax.set_xlim(0, timesteps)
+        ax.set_ylim(constraints.min()-0.2, constraints.max()+0.2)
+        ax.set_xlabel('time')
+        ax.set_ylabel('force')
+        ax.legend(handles=[fx, fy])
+        fig.savefig(os.path.join(ROOT, 'tmp/temp%07d.png'%i), bbox_inches='tight')
+        plt.cla()
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':
