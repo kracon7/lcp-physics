@@ -27,7 +27,7 @@ from lcp_physics.physics.action import build_mesh, random_action
 from lcp_physics.physics.sim import SimSingle
 
 
-TIME = 4
+TIME = 10
 STOP_DIFF = 1e-3
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
@@ -100,7 +100,7 @@ class CompositeSquare():
 
         return no_contact
 
-    def make_world(self, extend=0, solver_type=1, verbose=0, strict_no_pen=True):
+    def make_world(self, extend=1, solver_type=1, verbose=0, strict_no_pen=True):
         
         # init world
         world = World(self.bodies, self.joints, dt=Defaults.DT, verbose=verbose, extend=extend, 
@@ -161,7 +161,7 @@ def sim_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    obj_name = 'hammer'
+    obj_name = 'L'
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
 
     composite = CompositeSquare(mass_img_path, particle_radius=10)
@@ -170,18 +170,18 @@ def sim_demo(screen):
     # run ground truth to get ground truth trajectory
     rotation, translation = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
     
-    mass = torch.tensor([0.1]).double()
+    mass = torch.tensor([0.2]).double()
     mass_mapping = [0 for _ in range(N)]
     
     # initial velocity of composite body
-    init_vel = composite.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.2]).double())
+    init_vel = composite.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.5]).double())
 
     composite.initialize(rotation, translation, mass, mass_mapping, init_vel)
     world = composite.make_world()
     recorder = None
     # recorder = Recorder(DT, screen)
     estimated_pos = positions_run_world(world, run_time=TIME, screen=screen, recorder=recorder)
-    
+    print(estimated_pos[-1])
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == '-nd':

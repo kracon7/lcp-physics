@@ -27,7 +27,7 @@ from lcp_physics.physics.action import build_mesh, random_action
 from lcp_physics.physics.sim import SimSingle
 
 
-TIME = 4
+TIME = 1
 STOP_DIFF = 1e-3
 DT = Defaults.DT
 DEVICE = Defaults.DEVICE
@@ -100,7 +100,7 @@ class CompositeSquare():
 
         return no_contact
 
-    def make_world(self, extend=0, solver_type=1, verbose=0, strict_no_pen=True):
+    def make_world(self, extend=1, solver_type=1, verbose=0, strict_no_pen=True):
         
         # init world
         world = World(self.bodies, self.joints, dt=Defaults.DT, verbose=verbose, extend=extend, 
@@ -161,7 +161,7 @@ def sim_demo(screen):
         background = background.convert()
         background.fill((255, 255, 255))
 
-    obj_name = 'hammer'
+    obj_name = 'L'
     mass_img_path = os.path.join(ROOT, 'fig/%s_mass.png'%obj_name)
 
     composite_est = CompositeSquare(mass_img_path, particle_radius=10)
@@ -171,23 +171,47 @@ def sim_demo(screen):
     # run ground truth to get ground truth trajectory
     rotation, translation = torch.tensor([0]).type(Defaults.DTYPE), torch.tensor([[500, 300]]).type(Defaults.DTYPE)
     
-    mass_est = torch.tensor([0.1]).double().requires_grad_()
-    mass_gt = torch.tensor([0.2]).double()
-    mass_mapping = [0 for _ in range(N)]
+    mass_est = torch.tensor([0.1, 0.2, 0.2, 0.2, 0.2]).double().requires_grad_()
+    mass_gt = torch.tensor([0.2, 0.2, 0.2, 0.2, 0.2]).double()
+    mass_mapping = [0, 0, 1, 1, 1]
     
     # initial velocity of composite body
-    init_vel = composite_gt.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.2]).double())
+    init_vel = composite_gt.apply_torque(torch.tensor([0,0]).double(), torch.tensor([0.5]).double())
 
-    composite_est.initialize(rotation, translation, mass_est, mass_mapping, init_vel)
+    
     composite_gt.initialize(rotation, translation, mass_gt, mass_mapping, init_vel)
-    world_est = composite_est.make_world()
     world_gt = composite_gt.make_world()
     recorder = None
     # recorder = Recorder(DT, screen)
-    groun_truth_pos = positions_run_world(world_gt, run_time=TIME, screen=screen, recorder=recorder)
-    estimated_pos = positions_run_world(world_est, run_time=TIME, screen=screen, recorder=recorder)
-
+    ground_truth_pos = positions_run_world(world_gt, run_time=TIME, screen=screen, recorder=recorder)
+    ground_truth_pos = [p.data for p in ground_truth_pos]
+    ground_truth_pos = torch.cat(ground_truth_pos)
     
+    max_iter = 50
+    learning_rate = 1e-2
+    for i in range(max_iter):
+        composite_est.initialize(rotation, translation, mass_est, mass_mapping, init_vel) 
+        world_est = composite_est.make_world()   
+        estimated_pos = positions_run_world(world_est, run_time=TIME, screen=screen, recorder=recorder)
+        estimated_pos = torch.cat(estimated_pos)
+        estimated_pos = estimated_pos[:len(ground_truth_pos)]
+        clipped_ground_truth_pos = ground_truth_pos[:len(estimated_pos)]
+
+        loss = MSELoss()(estimated_pos, clipped_ground_truth_pos)
+        loss.backward()
+
+        grad = torch.nan_to_num(mass_est.grad.data)
+        mass_est = torch.clamp(mass_est.data - learning_rate * grad, min=1e-5)
+        mass_est.requires_grad=True
+
+        print('Iteration: {} / {}'.format(i+1, max_iter))
+        print('Loss: ', loss.item())
+        print('Gradient: ', grad)
+        print('Mass_est: ', mass_est.data)
+        print('-----')
+
+        reset_screen(screen)
+
     
 
 if __name__ == '__main__':
