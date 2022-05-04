@@ -85,8 +85,8 @@ class World:
         start_rot_joints = [(j[0].rot1, j[0].rot2) for j in self.joints]
         new_v, x = self.engine.solve_dynamics(self, dt)
 
-        # save the constraint results
-        self.constraints = x
+        # save the equality constraint results
+        self.constraints = x.squeeze(0)
 
         self.set_v(new_v)
 

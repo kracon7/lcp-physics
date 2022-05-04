@@ -37,13 +37,13 @@ class LCPFunction(Function):
         ctx.neq, ctx.nineq, ctx.nz = neq, nineq, nz
 
         ctx.Q_LU, ctx.S_LU, ctx.R = pdipm.pre_factor_kkt(Q, G, F, A)
-        zhats, ctx.nus, ctx.lams, ctx.slacks = pdipm.forward(
+        zhats, nus, ctx.lams, ctx.slacks = pdipm.forward(
             Q, p, G, h, A, b, F, ctx.Q_LU, ctx.S_LU, ctx.R,
             eps=lcp_options.eps, max_iter=lcp_options.max_iter, verbose=lcp_options.verbose,
             not_improved_lim=lcp_options.not_improved_lim, solver=lcp_options.solver)
 
         ctx.save_for_backward(zhats, Q, p, G, h, A, b, F)
-        return zhats
+        return zhats, nus
 
     # @staticmethod
     # def backward(ctx, dl_dzhat):
