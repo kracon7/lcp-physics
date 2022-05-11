@@ -27,8 +27,6 @@ class PdipmEngine():
         neq = Je.size(0) if Je.ndimension() > 0 else 0
         nbody = len(world.bodies)
 
-        nus = None
-
         f = world.apply_forces(t)
         u = torch.matmul(world.M(), world.get_v()) + dt * f
         if neq > 0:
@@ -51,6 +49,7 @@ class PdipmEngine():
             else:
                 inv = self.cached_inverse
             x = torch.matmul(inv, u)  # Kline Eq. 2.41
+            nus = x[world.vec_len * len(world.bodies):].squeeze(0)
         elif not extend and world.contacts:
             # Solve Mixed LCP (Kline 2.7.2)
             Jc = world.Jc()
@@ -76,7 +75,8 @@ class PdipmEngine():
             F[:, -mu_s.size(1):, mu_s.size(2):mu_s.size(2) + E.size(1)] = \
                 -E.transpose(1, 2)
             h = torch.cat([v, v.new_zeros(v.size(0), Js.size(1) + mu_s.size(1))], 1)   # m in Eq.(2)
-            x, nus = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
+            x, nus = self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
+            x = -x
         elif extend:
             Jc = world.Jc()
             ncon = Jc.size(0)
@@ -115,9 +115,10 @@ class PdipmEngine():
                            (world.mu_b_diag_M().unsqueeze(0))
                           ], dim=1)   # m in Eq.(2)
 
-            x, nus = -self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
+            x, nus = self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
+            x = -x
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
-        return new_v, x, nus
+        return new_v, nus
 
     def post_stabilization(self, world):
         v = world.get_v()
