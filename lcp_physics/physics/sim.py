@@ -21,17 +21,6 @@ from .world import World, run_world
 from .action import build_exterior_mesh, random_action
 
 
-def image_to_pos(mass_img, particle_radius):
-    img = cv2.imread(mass_img)
-    mask = img[:,:,0] < 255
-    x_cord, y_cord = np.where(mask)
-    x_cord, y_cord = x_cord - x_cord[0], y_cord - y_cord[0]
-    particle_pos = 2 * particle_radius * np.stack([x_cord, y_cord]).T
-    particle_pos = torch.from_numpy(particle_pos)
-    mask = torch.from_numpy(mask)
-    return particle_pos.type(Defaults.DTYPE), mask
-
-
 class SimSingle():
     def __init__(self, particle_pos0, particle_radius, hand_radius, obj_mask, DT = Defaults.DT, 
                     DEVICE = Defaults.DEVICE):
