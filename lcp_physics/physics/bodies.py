@@ -110,8 +110,8 @@ class Body(object):
             # First do linear interpolation and then convert to torch tensor
             tf, fx, fy, fw = self.forces[0][:, 0], self.forces[0][:, 1], \
                              self.forces[0][:, 2], self.forces[0][:, 3]
-            fx_interp, fy_interp, fw_interp = np.interp(t, tf, fx),
-                                              np.interp(t, tf, fy),
+            fx_interp, fy_interp, fw_interp = np.interp(t, tf, fx), \
+                                              np.interp(t, tf, fy), \
                                               np.interp(t, tf, fw)
             return torch.tensor([fx_interp, fy_interp, fw_interp]).type(self.v.dtype)
 

@@ -115,7 +115,7 @@ class PdipmEngine():
 
             x = - self.lcp_solver.apply(M, u, G, h, Je, b, F, self.lcp_options)
         new_v = x[:world.vec_len * len(world.bodies)].squeeze(0)
-        return new_v, x
+        return new_v
 
     def post_stabilization(self, world):
         v = world.get_v()

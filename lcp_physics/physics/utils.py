@@ -25,7 +25,7 @@ class Defaults:
     FRIC_COEFF_B = [0.05, 0.2]
     FRIC_DIRS = 2
 
-    FPS = 30
+    FPS = 100
     DT = 1.0 / FPS
 
     ENGINE = 'PdipmEngine'

@@ -16,3 +16,4 @@ experimental
 .cache
 .ipynb_checkpoints
 tmp/*
+data
